@@ -6,54 +6,56 @@ class Player:
         self.first_name = first_name
         self.last_name = last_name
         self.shots = []
+        self.winners = 0
+        self.unforced_errors = 0
         self.serves = []
+        self.total_first_serves = 0
+        self.made_first_serves = 0
+        self.total_second_serves = 0
+        self.made_second_serves = 0
         self.first_serve_percent = 0.0
         self.second_serve_percent = 0.0
         self.first_serve_win_percent = 0.0
         self.second_serve_win_percent = 0.0
+        self.aces = 0
+        self.double_faults = 0
+
+    def update_serves(self, direction, miss, ace, snv, serve_number):
+        if miss is None: # server did not miss
+            if serve_number == 1:
+                self.total_first_serves += 1
+                self.made_first_serves += 1
+            elif serve_number == 2:
+                self.total_second_serves += 1
+                self.made_second_serves += 1
+        if miss is not None:
+            if serve_number == 1:
+                self.total_first_serves += 1
+            elif serve_number == 2:
+                self.total_second_serves += 1
 
 
-    def handle_serve(self, pt1, pt2, serve, shot, error):
-        for s1, s2 in zip(pt1, pt2):
-            c1 = s1[:1] # first serve direction
-            o1 = s1[1:2] # first serve outcome
-            c2 = s2[:1] # second serve direction
-            o2 = s2[1:2] # second serve outcome
+        self.serves.append({"direction": direction,
+                            "miss": miss,
+                            "ace": ace,
+                            "serve and volley": snv,
+                            "serve number": serve_number})
 
-            if o1 in error: # if first serve is missed, add missed serve to total serves
-                self.serves.append({"direction": serve[c1],
-                                    "miss": error[o1],
-                                    "ace": False,
-                                    "serve_number": 1})
-                if o2 in error: # if second serve is missed, add missed serve to total serves
-                    self.serves.append({"direction": serve[c2],
-                                        "miss": error[o2],
-                                        "ace": False,
-                                        "serve_number": 2})
-                elif o2 == "*":
-                    self.serves.append({"direction": serve[c2],
-                                        "miss": None,
-                                        "ace": True,
-                                        "serve_number": 2})
-                elif o2 in shot: # if second serve is made in
-                    self.serves.append({"direction": serve[c2],
-                                        "miss": None,
-                                        "ace": False,
-                                        "serve_number": 2})
-                else:
-                    print("error, shot1 not found in : ", o1, "or", o2)
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
-            elif o1 == "*":
-                self.serves.append({"direction": serve[c1],
-                                    "miss": None,
-                                    "ace": True,
-                                    "serve_number": 1})
-            elif o1 in shot:
-                self.serves.append({"direction": serve[c1],
-                                    "miss": None,
-                                    "ace": False,
-                                    "serve_number": 1})
-
-            else:
-                print("error, shot2 not found in: ", o1, "or", o2)
+    def add_shot(self, stroke, direction, depth, error, forced, winner):
+        if error is not None and forced is False:
+            self.unforced_errors += 1
+        if winner is True:
+            self.winners += 1
+        self.shots.append(
+            {"stroke": stroke,
+             "direction": direction,
+             "depth": depth,
+             "error": error,
+             "forced": forced,
+             "winner": winner
+             }
+        )
 
