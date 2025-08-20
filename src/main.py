@@ -2,9 +2,7 @@ import pandas as pd
 
 from src.EventLogger import Context, Serve, EventLogger
 from src.Player import Player
-from src.Players import Players
 import src.codes as codes
-from src.Point import Point
 from src.dataHandler import create_df
 
 
@@ -14,9 +12,7 @@ def main():
 
     fo_final = df[df['match_id'].str.contains("20250608", case=False)]
 
-    serve_events = EventLogger()
-
-    parse_match(fo_final, serve_events)
+    parse_match(fo_final)
 
 
 
@@ -27,27 +23,33 @@ def main():
 
 
 
-
+def get_players(match):
+    get_match_id_string(match)
+    info = parse_match_id(get_match_id_string(match))
+    player1 = Player(info[4], info[5])
+    player2 = Player(info[5], info[6])
+    return player1, player2
 
 
 def get_match_id_string(match: pd.DataFrame):
     return match.iat[0,0]
 
-def parse_match(match, serve_events):
-    if serve_events is None:
-        serve_events = EventLogger()
+def parse_match(match):
+    serve_events = EventLogger()
+    player1, player2 = get_players(match)
 
     for index,row in match.iterrows():
-        context = parse_context(row)
-        if pd.isnull(row['2nd']):
-            serve_number = 1
-            serve = parse_serve(row['1st'], serve_number)
+        context = parse_context(row, player1, player2)
+        if pd.isnull(row['2nd']) or row['2nd'] == '':
+            serve = parse_serve(row['1st'], 1)
+            serve_events.log_serve(serve, context)
         else:
-            serve_number = 2
-            serve = parse_serve(row['2nd'], serve_number)
-        serve_events.log_serve(serve, context)
+            serve = parse_serve(row['1st'], 1)
+            serve_events.log_serve(serve, context)
+            serve = parse_serve(row['2nd'], 2)
+            serve_events.log_serve(serve, context)
 
-
+#gathers serve info and returns a Serve object
 def parse_serve(point, serve_number):
     if point is None:
         return None
@@ -85,7 +87,9 @@ def parse_serve(point, serve_number):
 
     return Serve(serve_direction=serve_direction,serve_num=serve_number, is_fault=is_fault,miss_type=miss_type,is_ace=is_ace,snv=snv)
 
-def parse_context(row):
+
+#gathers context of the point and creates a Context element
+def parse_context(row, player1, player2):
     match_id = row['match_id']
     point_id = f'{match_id}-{row["Pt"]}'
     set1 = row['Set1']
@@ -93,9 +97,7 @@ def parse_context(row):
     set_score = set1 + "-" + set2
     game_score = row['Gm1'] + "-" + row['Gm2']
     point_score = row['Pts']
-    date, gender, tournament, round_, player1_first_name, player1_last_name, player2_first_name, player2_last_name = parse_match_id(match_id)
-    player1 = Player(player1_first_name, player1_last_name)
-    player2 = Player(player2_first_name, player2_last_name)
+
     if row['Svr'] == "1":
         server = player1
         returner = player2
@@ -116,6 +118,8 @@ def parse_context(row):
 
     return Context(match_id=match_id, point_id=point_id, set_score=set_score, game_score=game_score, point_score=point_score, server=server, returner=returner, point_winner=point_winner)
 
+
+#gets info from match id string
 def parse_match_id(id_: str):
     s = id_.split("-")
 
