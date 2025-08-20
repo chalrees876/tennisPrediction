@@ -9,5 +9,5 @@ class Player:
 
 
     def full_name(self):
-        print(f"{self.first_name} {self.last_name}")
+        return f"{self.first_name} {self.last_name}"
 

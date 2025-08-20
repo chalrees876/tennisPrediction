@@ -24,7 +24,7 @@ def get_players(match):
     get_match_id_string(match)
     info = parse_match_id(get_match_id_string(match))
     player1 = Player(info[4], info[5])
-    player2 = Player(info[5], info[6])
+    player2 = Player(info[6], info[7])
     return player1, player2
 
 
@@ -68,14 +68,14 @@ def parse_serve(point, serve_number):
         serve_outcome = point[2:3]
         snv = True
 
-    serve_direction = ServeDirection(serve_direction) # set direction to first serve direction
+    serve_direction = ServeDirection(serve_direction).name # set direction to first serve direction
     is_ace = False  # set ace to false
     is_fault = False
     miss_type = None
 
     if serve_outcome in error_code:  # if serve is out
         is_fault = True
-        miss_type = MissType(serve_outcome)
+        miss_type = MissType(serve_outcome).name
 
     elif serve_outcome == "*":
         is_ace = True
@@ -99,19 +99,19 @@ def parse_context(row, player1, player2):
     point_score = row['Pts']
 
     if row['Svr'] == "1":
-        server = player1
-        returner = player2
+        server = player1.full_name()
+        returner = player2.full_name()
     elif row['Svr'] == "2":
-        server = player2
-        returner = player1
+        server = player2.full_name()
+        returner = player1.full_name()
     else:
         server = None
         returner = None
         print("no server found")
     if row['PtWinner'] == "1":
-        point_winner = player1
+        point_winner = player1.full_name()
     elif row['PtWinner'] == "2":
-        point_winner = player2
+        point_winner = player2.full_name()
     else:
         point_winner = None
         print("no winner found")
