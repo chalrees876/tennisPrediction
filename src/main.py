@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.EventLogger import Context, Serve, EventLogger
+from src.EventLogger import Context, Serve, EventLogger, MissType, ServeDirection
 from src.Player import Player
 import src.codes as codes
 from src.dataHandler import create_df
@@ -12,7 +12,9 @@ def main():
 
     fo_final = df[df['match_id'].str.contains("20250608", case=False)]
 
-    parse_match(fo_final)
+    serve_events = parse_match(fo_final)
+
+    serve_events.print()
 
 
 
@@ -42,12 +44,16 @@ def parse_match(match):
         context = parse_context(row, player1, player2)
         if pd.isnull(row['2nd']) or row['2nd'] == '':
             serve = parse_serve(row['1st'], 1)
-            serve_events.log_serve(serve, context)
+            serve_row = serve + context
+            serve_events.log_serve(serve_row)
         else:
             serve = parse_serve(row['1st'], 1)
-            serve_events.log_serve(serve, context)
+            serve_row = serve + context
+            serve_events.log_serve(serve_row)
             serve = parse_serve(row['2nd'], 2)
-            serve_events.log_serve(serve, context)
+            serve_row = serve + context
+            serve_events.log_serve(serve_row)
+    return serve_events
 
 #gathers serve info and returns a Serve object
 def parse_serve(point, serve_number):
@@ -67,14 +73,14 @@ def parse_serve(point, serve_number):
         serve_outcome = point[2:3]
         snv = True
 
-    serve_direction = serve_code[serve_direction]  # set direction to first serve direction
+    serve_direction = ServeDirection(serve_direction) # set direction to first serve direction
     is_ace = False  # set ace to false
     is_fault = False
     miss_type = None
 
     if serve_outcome in error_code:  # if serve is out
         is_fault = True
-        miss_type = error_code[serve_outcome]
+        miss_type = MissType(serve_outcome)
 
     elif serve_outcome == "*":
         is_ace = True
@@ -84,8 +90,7 @@ def parse_serve(point, serve_number):
     else:
 
         print("error, first serve not found in: ", serve_direction, serve_outcome)
-
-    return Serve(serve_direction=serve_direction,serve_num=serve_number, is_fault=is_fault,miss_type=miss_type,is_ace=is_ace,snv=snv)
+    return [serve_direction, serve_number, is_fault, miss_type,is_ace,snv]
 
 
 #gathers context of the point and creates a Context element
@@ -116,7 +121,7 @@ def parse_context(row, player1, player2):
         point_winner = None
         print("no winner found")
 
-    return Context(match_id=match_id, point_id=point_id, set_score=set_score, game_score=game_score, point_score=point_score, server=server, returner=returner, point_winner=point_winner)
+    return [match_id, point_id, set_score,game_score, point_score,server,returner,point_winner]
 
 
 #gets info from match id string
