@@ -41,13 +41,14 @@ class Serve:
     is_ace: bool = False
     snv: bool = False
 
-
-
-
-
 class EventLogger:
     def __init__(self):
         self.serve_events = []
 
     def log_serve(self, serve: Serve, context: Context):
         self.serve_events.append([serve, context])
+
+    def print(self):
+        for serve, context in self.serve_events:
+            print(serve)
+            print(context)
