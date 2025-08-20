@@ -5,7 +5,6 @@ from src.Player import Player
 import src.codes as codes
 from src.dataHandler import create_df
 
-
 def main():
 
     df = create_df()
@@ -14,11 +13,7 @@ def main():
 
     serve_events = parse_match(fo_final)
 
-    serve_events.print()
-
-
-
-
+    return serve_events
 
 
 
