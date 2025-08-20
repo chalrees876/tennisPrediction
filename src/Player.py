@@ -9,8 +9,8 @@ class Player:
 
 
     def full_name(self):
-        return f"{self.first_name} {self.last_name}"
+        print(f"{self.first_name} {self.last_name}")
 
-    def play_match(self, match_id):
-        self.matches.append(Match(match_id))
+    def play_match(self, match):
+        self.matches.append(match)
 

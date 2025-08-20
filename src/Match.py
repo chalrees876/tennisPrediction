@@ -1,4 +1,4 @@
-def handle_serve(pt1, pt2, set_score, game_score, point_score, server, returner, point_winner, serve, shot, error):
+"""def handle_serve(pt1, pt2, set_score, game_score, point_score, server, returner, point_winner, serve, shot, error):
     serve_event_headers = ['serve_num',
                             'serve_direction',
                             'is_fault',
@@ -82,29 +82,11 @@ def handle_serve(pt1, pt2, set_score, game_score, point_score, server, returner,
 
         else:
             print("error, first serve not found in: ", o1, "or", c1, s1)
-
+"""
 class Match:
     def __init__(self, match_id, player1, player2):
         self.match_id = match_id
         self.players = [player1, player2]
-        self.serve_event_headers = ['serve_num',
-                             'serve_direction',
-                             'is_fault',
-                             'miss_type',
-                             'is_ace',
-                             'snv',
-                             'match_id',
-                             'set_score'
-                             'game_score',
-                             'point_score',
-                             'server',
-                             'returner',
-                             'point_winner']
-        self.serve_events = []
-
-
-    def add_serve_event(self, row):
-        self.serve_events.append({"serve_num": })
 
     def get_match(self, match_id):
         return self.match_id
