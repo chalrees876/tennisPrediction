@@ -6,7 +6,7 @@ import pandas as pd
 from src.Player import Player
 
 
-columns = ["Serve Direction", "Serve Num", "Is Fault", "Miss Type", "Is Ace", "SNV", "Match Id", "Point Id", "Set Score", "Game Score", "Point Score", "Server", "Returner", "Point Winner"]
+columns = ["Serve Direction", "Serve Num", "Is Fault", "Miss Type", "Is Ace", "SNV", "Match Id", "Point Id", "Set Score", "Game Score", "Point Score", "Server", "Returner", "Point Winner", "Player 1", "Player 2"]
 
 
 class ServeDirection(Enum):
@@ -35,6 +35,8 @@ class Context:
     server: Player
     returner: Player
     point_winner: Player
+    player1: Player
+    player2: Player
 
 @dataclass
 class Serve:
@@ -54,13 +56,14 @@ class EventLogger:
     def log_serve(self, serve_row):
         self.serve_events.append(serve_row)
 
-    def print(self):
-        print(self.serve_events)
-        for row in self.serve_events:
-            if len(row) != 14:
-                print(len(row))
-
-    def create_el_df(self):
+    def create_serve_df(self):
         return pd.DataFrame(self.serve_events, columns = columns)
+
+    def get_players(self):
+        row0 = self.serve_events[0]
+        player1 = row0[14]
+        player2 = row0[15]
+
+        return player1, player2
 
 
