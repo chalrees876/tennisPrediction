@@ -5,13 +5,17 @@ from src.Player import Player
 import src.codes as codes
 from src.dataHandler import create_df
 
-def main():
+def main(match_id):
 
     df = create_df()
 
-    fo_final = df[df['match_id'].str.contains("20250608", case=False)]
+    match = df[df['match_id'].str.contains(match_id, case=False)]
 
-    serve_events = parse_match(fo_final)
+    if not match['match_id'].is_unique:
+        print("multiple matches found")
+        return None
+
+    serve_events = parse_match(match)
 
     return serve_events
 
@@ -58,6 +62,7 @@ def parse_serve(point, serve_number):
     serve_code = codes.serve_code
     error_code = codes.error_code
     shot_code = codes.shot_code
+    point_end_code = codes.point_end_code
     if "c" in point:
         point = point.replace("c", "")  # removing lets
     serve_direction = point[:1]  # serve direction
@@ -67,7 +72,6 @@ def parse_serve(point, serve_number):
     if serve_outcome == "+":
         serve_outcome = point[2:3]
         snv = True
-
     serve_direction = ServeDirection(serve_direction).name # set direction to first serve direction
     is_ace = False  # set ace to false
     is_fault = False
@@ -80,18 +84,18 @@ def parse_serve(point, serve_number):
     elif serve_outcome == "*":
         is_ace = True
 
-    elif serve_outcome in shot_code:  # first serve made
+    elif serve_outcome in shot_code or serve_outcome in point_end_code:  # first serve made
         pass
     else:
 
-        print("error, first serve not found in: ", serve_direction, serve_outcome)
+        print("error, first serve not found in: ", point, serve_outcome)
     return [serve_direction, serve_number, is_fault, miss_type,is_ace,snv]
 
 
 #gathers context of the point and creates a Context element
 def parse_context(row, player1, player2):
     match_id = row['match_id']
-    point_id = f'{match_id}-{row["Pt"]}'
+    point_id = row['Pt']
     set1 = row['Set1']
     set2 = row['Set2']
     set_score = set1 + "-" + set2
@@ -116,7 +120,7 @@ def parse_context(row, player1, player2):
         point_winner = None
         print("no winner found")
 
-    return [match_id, point_id, set_score,game_score, point_score,server,returner,point_winner]
+    return [match_id, point_id, set_score,game_score, point_score,server,returner,point_winner, player1.full_name(), player2.full_name()]
 
 
 #gets info from match id string
