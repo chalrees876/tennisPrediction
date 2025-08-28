@@ -1,6 +1,7 @@
-serve_code = {"4": "wide",
-         "5": "body",
-         "6": "down the t"}
+serve_code = {"4": "W",
+         "5": "B",
+         "6": "T",
+        "u": "Underhand"}
 
 return_depth_code = {
     "7": "inside service line",

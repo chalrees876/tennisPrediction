@@ -20,8 +20,9 @@ def create_df():
               'Notes': "string",
               'PtWinner': "string"}
 
-    df = pd.read_csv('../data/charting-m-points-2020s.csv', dtype=dtypes)
+    df = pd.read_csv('../../data/charting-m-points-2020s.csv', dtype=dtypes)
 
-    df[['1st', '2nd']] = df[['1st', '2nd']].replace({'c': ''}, regex=True)
+    df['1st'] = df['1st'].str.replace('c', '')
+    df['2nd'] = df['2nd'].str.replace('c', '')
 
     return df

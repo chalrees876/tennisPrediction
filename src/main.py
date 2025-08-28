@@ -1,143 +1,147 @@
+from datetime import datetime
+
 import pandas as pd
 
-from src.EventLogger import Context, Serve, EventLogger, MissType, ServeDirection
-from src.Player import Player
-import src.codes as codes
-from src.dataHandler import create_df
+#from src.Player import Player
+import src.codes.codes as codes
+from src.dataclasses.MatchData import MatchData
+from src.dataclasses.Player import Player
+from src.dataclasses.PlayerMatch import PlayerMatch
+from src.initializing.dataHandler import create_df
+from natsort import natsort_keygen
 
-def main(match_id):
+from typing import Dict
+import re
+
+
+def main():
 
     df = create_df()
 
-    match = df[df['match_id'].str.contains(match_id, case=False)]
-
-    if not match['match_id'].is_unique:
-        print("multiple matches found")
-        return None
-
-    serve_events = parse_match(match)
-
-    return serve_events
+    serve_df = create_serve_df(df)
 
 
 
 
+    players: Dict[str, PlayerMatch] = {}
+
+    players = create_players(df, players)
+
+    rows = []
+    for name, player in players.items():
+        for match_id, pm in player.matches.items():
+            rows.append({
+                'Player': player.name,
+                'Match': match_id,
+                'first_serve_pctg': pm.first_serve_pctg,
+                'second_serve_pctg': pm.second_serve_pctg,
+                "double_faults": pm.double_faults,
+                'win': pm.win
+            })
+    pd.DataFrame(rows).to_csv('../data/matches.csv', index=False)
 
 
-def get_players(match):
-    get_match_id_string(match)
-    info = parse_match_id(get_match_id_string(match))
-    player1 = Player(info[4], info[5])
-    player2 = Player(info[6], info[7])
-    return player1, player2
-
-
-def get_match_id_string(match: pd.DataFrame):
-    return match.iat[0,0]
-
-def parse_match(match):
-    serve_events = EventLogger()
-    player1, player2 = get_players(match)
-
-    for index,row in match.iterrows():
-        context = parse_context(row, player1, player2)
-        if pd.isnull(row['2nd']) or row['2nd'] == '':
-            serve = parse_serve(row['1st'], 1)
-            serve_row = serve + context
-            serve_events.log_serve(serve_row)
+def create_players(df, players):
+    for match_id, g in df.groupby('match_id'):
+        match_id_string = g['match_id'].unique()[0]
+        pattern = r'(?P<date>\d{8})-M-(?P<tournament>[^-]+)-(?P<round>[^-]+)-(?P<p1>[^-]+)-(?P<p2>[^-]+)$'
+        m = re.search(pattern, match_id_string)
+        g = g.sort_values(by=['Pt'], key=natsort_keygen())
+        if m is None:
+            print("Incorrect format", match_id_string)
         else:
-            serve = parse_serve(row['1st'], 1)
-            serve_row = serve + context
-            serve_events.log_serve(serve_row)
-            serve = parse_serve(row['2nd'], 2)
-            serve_row = serve + context
-            serve_events.log_serve(serve_row)
-    return serve_events
+            date = m.group("date")
+            date_format = "%Y%m%d"
+            date = datetime.strptime(date, date_format)
+            tournament = m.group("tournament").replace("_", " ")
+            _round = m.group("round").replace("_", " ")
+            p1 = m.group("p1").replace("_", " ")
+            p2 = m.group("p2").replace("_", " ")
+            match_data = MatchData(date, tournament, _round, p1, p2, match_id_string)
 
-#gathers serve info and returns a Serve object
-def parse_serve(point, serve_number):
-    if point is None:
-        return None
+        p1Winner = bool(g['PtWinner'].tail(1).str.contains("1").any())
+        p2Winner = bool(g['PtWinner'].tail(1).str.contains("2").any())
 
+        p1_first_serve_pctg, p1_second_serve_pctg, p1_double_faults = get_serve_percents(g, "1")
+        p2_first_serve_pctg, p2_second_serve_pctg, p2_double_faults = get_serve_percents(g, "2")
+
+        p1_match = PlayerMatch(p1, p1_first_serve_pctg, p1_second_serve_pctg, p1_double_faults, p1Winner, match_data)
+        p2_match = PlayerMatch(p2, p2_first_serve_pctg, p2_second_serve_pctg, p2_double_faults, p2Winner, match_data)
+
+        if p1 not in players:
+            players[p1] = Player(name=p1)
+        if p2 not in players:
+            players[p2] = Player(name=p2)
+        players[p1].matches[match_id_string] = p1_match
+        players[p2].matches[match_id_string] = p2_match
+    return players
+
+
+def get_serve_percents(df: pd.DataFrame, player_number):
+    df = df[df['Svr'] == player_number]
+    total_first_serves = len(df)
+    first_serves_in = len(df[~df['1st Is Fault']])
+    first_serve_pctg = round(first_serves_in / total_first_serves * 100, 1)
+    df_second_serves = df[df['1st Is Fault']]
+    total_second_serves = len(df_second_serves)
+    second_serves_in = len(df_second_serves[~df_second_serves['2nd Is Fault']])
+    if total_second_serves != 0:
+        second_serve_pctg = round(second_serves_in / total_second_serves * 100, 1)
+    else:
+        second_serve_pctg = 100
+    double_faults = len(df_second_serves[df_second_serves['2nd Is Fault']])
+
+    return first_serve_pctg, second_serve_pctg, double_faults
+
+
+def create_serve_df(df: pd.DataFrame) -> pd.DataFrame:
+    set_serve_direction(df)
+    set_is_fault_and_snv(df)
+    set_is_ace(df)
+    return df
+
+def set_is_ace(df):
+    df['1st Is Ace'] = df['1st'].str[1] == '*'
+    df['2nd Is Ace'] = df['2nd'].str[1] == '*'
+
+def set_miss_type(df: pd.DataFrame) -> pd.DataFrame:
+    df['1st Miss Type'] = df['1st'].str[1].map(codes.error_code)
+    df['2nd Miss Type'] = df['2nd'].str[1].map(codes.error_code)
+    return df
+
+def set_is_fault_and_snv(df: pd.DataFrame) -> pd.DataFrame:
+    #serve and volley
+    first_snv = df['1st'].str[1].map(codes.optional_code)
+    second_snv = df['2nd'].str[1].map(codes.optional_code)
+    first_snv = pd.notnull(first_snv)
+    second_snv = pd.notnull(second_snv)
+    df['First SNV'] = first_snv
+    df['Second SNV'] = second_snv
+
+    #regular Fault
+    copy = df.copy()
+    copy['1st'] = copy['1st'].str.replace('+', '')
+    copy['2nd'] = copy['2nd'].str.replace('+', '')
+    first_miss_code = copy['1st'].str[1]
+    first_miss_code = first_miss_code.map(codes.error_code)
+    df['1st Is Fault'] = pd.notnull(first_miss_code)
+    df['2nd Is Fault'] = pd.notnull(copy['2nd'].str[1].map(codes.error_code))
+
+    #foot fault
+    df['1st Is Fault'] = pd.notnull(df['2nd'])
+    return df
+
+def set_serve_direction(df):
     serve_code = codes.serve_code
-    error_code = codes.error_code
-    shot_code = codes.shot_code
-    point_end_code = codes.point_end_code
-    if "c" in point:
-        point = point.replace("c", "")  # removing lets
-    serve_direction = point[:1]  # serve direction
-    serve_outcome = point[1:2]  # serve outcome
+    first_serve_code = df['1st'].str[0]
+    first_serve_code = first_serve_code.map(serve_code).fillna("Not Found")
+    # Translate code → direction using the dictionary
+    df['1st Serve Direction'] = first_serve_code
 
-    snv = False  # serve and volley serve = false
-    if serve_outcome == "+":
-        serve_outcome = point[2:3]
-        snv = True
-    serve_direction = ServeDirection(serve_direction).name # set direction to first serve direction
-    is_ace = False  # set ace to false
-    is_fault = False
-    miss_type = None
+    second_serve_code = df['2nd'].str[0]
+    df['2nd Serve Direction'] = second_serve_code
 
-    if serve_outcome in error_code:  # if serve is out
-        is_fault = True
-        miss_type = MissType(serve_outcome).name
-
-    elif serve_outcome == "*":
-        is_ace = True
-
-    elif serve_outcome in shot_code or serve_outcome in point_end_code:  # first serve made
-        pass
-    else:
-
-        print("error, first serve not found in: ", point, serve_outcome)
-    return [serve_direction, serve_number, is_fault, miss_type,is_ace,snv]
-
-
-#gathers context of the point and creates a Context element
-def parse_context(row, player1, player2):
-    match_id = row['match_id']
-    point_id = row['Pt']
-    set1 = row['Set1']
-    set2 = row['Set2']
-    set_score = set1 + "-" + set2
-    game_score = row['Gm1'] + "-" + row['Gm2']
-    point_score = row['Pts']
-
-    if row['Svr'] == "1":
-        server = player1.full_name()
-        returner = player2.full_name()
-    elif row['Svr'] == "2":
-        server = player2.full_name()
-        returner = player1.full_name()
-    else:
-        server = None
-        returner = None
-        print("no server found")
-    if row['PtWinner'] == "1":
-        point_winner = player1.full_name()
-    elif row['PtWinner'] == "2":
-        point_winner = player2.full_name()
-    else:
-        point_winner = None
-        print("no winner found")
-
-    return [match_id, point_id, set_score,game_score, point_score,server,returner,point_winner, player1.full_name(), player2.full_name()]
-
-
-#gets info from match id string
-def parse_match_id(id_: str):
-    s = id_.split("-")
-
-    date, gender, tournament, round_, player1, player2 = s
-
-    player1_name = player1.split("_")
-
-    player1_first_name, player1_last_name = player1_name
-
-    player2_name = player2.split("_")
-
-    player2_first_name, player2_last_name = player2_name
-
-    return [date, gender, tournament, round_, player1_first_name, player1_last_name, player2_first_name, player2_last_name]
+    return df
 
 
 if __name__ == '__main__':
