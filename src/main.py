@@ -2,16 +2,32 @@ from datetime import datetime
 
 import pandas as pd
 
+import os, sys, django
+
+# 1) Make sure Python can find your project root (the folder with manage.py)
+sys.path.append('~/WGU/tennisPrediction')
+
+# 2) Point to your settings module: "<project_package>.settings"
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # adjust if not "config"
+
+# 3) Load Django apps/settings
+django.setup()
+
+# 4) Now it's safe to import models
+from tennis.models import Tournament, Player, Match
+
+
 #from src.Player import Player
 import src.codes.codes as codes
 from src.dataclasses.MatchData import MatchData
-from src.dataclasses.Player import Player
 from src.dataclasses.PlayerMatch import PlayerMatch
 from src.initializing.dataHandler import create_df
 from natsort import natsort_keygen
 
 from typing import Dict
 import re
+
+from tennis.models import Tournament, Match, Player
 
 
 def main():
@@ -23,25 +39,10 @@ def main():
 
 
 
-    players: Dict[str, PlayerMatch] = {}
-
-    players = create_players(df, players)
-
-    rows = []
-    for name, player in players.items():
-        for match_id, pm in player.matches.items():
-            rows.append({
-                'Player': player.name,
-                'Match': match_id,
-                'first_serve_pctg': pm.first_serve_pctg,
-                'second_serve_pctg': pm.second_serve_pctg,
-                "double_faults": pm.double_faults,
-                'win': pm.win
-            })
-    pd.DataFrame(rows).to_csv('../data/matches.csv', index=False)
+    create_players(df)
 
 
-def create_players(df, players):
+def create_players(df):
     for match_id, g in df.groupby('match_id'):
         match_id_string = g['match_id'].unique()[0]
         pattern = r'(?P<date>\d{8})-M-(?P<tournament>[^-]+)-(?P<round>[^-]+)-(?P<p1>[^-]+)-(?P<p2>[^-]+)$'
@@ -53,28 +54,46 @@ def create_players(df, players):
             date = m.group("date")
             date_format = "%Y%m%d"
             date = datetime.strptime(date, date_format)
+            year = date.year
             tournament = m.group("tournament").replace("_", " ")
             _round = m.group("round").replace("_", " ")
             p1 = m.group("p1").replace("_", " ")
             p2 = m.group("p2").replace("_", " ")
-            match_data = MatchData(date, tournament, _round, p1, p2, match_id_string)
 
-        p1Winner = bool(g['PtWinner'].tail(1).str.contains("1").any())
-        p2Winner = bool(g['PtWinner'].tail(1).str.contains("2").any())
+            p1_winner = bool(g['PtWinner'].tail(1).str.contains("1").any())
+            p2_winner = bool(g['PtWinner'].tail(1).str.contains("2").any())
 
-        p1_first_serve_pctg, p1_second_serve_pctg, p1_double_faults = get_serve_percents(g, "1")
-        p2_first_serve_pctg, p2_second_serve_pctg, p2_double_faults = get_serve_percents(g, "2")
+            t, _ = Tournament.objects.update_or_create(name=tournament, year=year)
+            p1_object, _ = Player.objects.update_or_create(name=p1)
+            p2_object, _ = Player.objects.update_or_create(name=p2)
 
-        p1_match = PlayerMatch(p1, p1_first_serve_pctg, p1_second_serve_pctg, p1_double_faults, p1Winner, match_data)
-        p2_match = PlayerMatch(p2, p2_first_serve_pctg, p2_second_serve_pctg, p2_double_faults, p2Winner, match_data)
+            if p1_winner:
+                winner = p1_object
+                loser = p2_object
+            if p2_winner:
+                winner = p2_object
+                loser = p1_object
 
-        if p1 not in players:
-            players[p1] = Player(name=p1)
-        if p2 not in players:
-            players[p2] = Player(name=p2)
-        players[p1].matches[match_id_string] = p1_match
-        players[p2].matches[match_id_string] = p2_match
-    return players
+            p1_first_serve_pctg, p1_second_serve_pctg, p1_double_faults = get_serve_percents(g, "1")
+            p2_first_serve_pctg, p2_second_serve_pctg, p2_double_faults = get_serve_percents(g, "2")
+
+            match, created = Match.objects.update_or_create(
+                player1 = p1_object,
+                player2 = p2_object,
+                tournament = t,
+                defaults={
+                    "round": _round,
+                    "winner":winner,
+                "loser":loser,
+                "p1_first_serve_pctg" : p1_first_serve_pctg,
+                "p2_first_serve_pctg" : p2_first_serve_pctg,
+                "p1_double_faults" : p1_double_faults,
+                "p2_double_faults" : p2_double_faults
+                }
+            )
+
+            match.full_clean()
+            match.save()
 
 
 def get_serve_percents(df: pd.DataFrame, player_number):

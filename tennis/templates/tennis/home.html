@@ -6,9 +6,13 @@
     <title>Document</title>
 </head>
 <body>
-    {% for player in players%}
-        <h2>{{player.first_name}}</h2>
-        <h3>{{player.last_name}}</h3>
-    {%endfor%}
+{%for match in matches%}
+    <h1>MATCH</h1>
+     <h5>Tournament: {{match.tournament.name}} {{match.tournament.year}}</h5>
+    <h5>Round: {{match.round}}</h5>
+    <h5>Player 1: {{match.player1}}</h5>
+    <h5>Player 2: {{match.player2}}</h5>
+    <h5>Winner: {{match.winner}}</h5>
+{%endfor%}
 </body>
 </html>
