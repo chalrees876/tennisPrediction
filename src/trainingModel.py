@@ -28,6 +28,8 @@ def run_pipeline(csv_path: str):
     df["win"] = enc.fit_transform(df[["win"]])
 
     X = df[["first_serve_pctg", "double_faults"]].values
+    Z = df[['first_serve_pctg']].values
+    Q = df[['double_faults']].values
     y = df["win"].values
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -46,8 +48,8 @@ def run_pipeline(csv_path: str):
     ax.set_title("Train vs Test in Feature Space")
     legend_elements = [Line2D([0], [0], color='black', marker='o', label='Train', linestyle=''),
                        Line2D([0], [0], color='black', marker='x', label='Test', linestyle=''),
-                       Line2D([0], [0], color='blue', marker='s', label='Win', linestyle=''),
-                       Line2D([0], [0], color='red', marker='s', label='Loss', linestyle=''),]
+                       Line2D([0], [0], color='blue', marker='s', label='Loss', linestyle=''),
+                       Line2D([0], [0], color='red', marker='s', label='Win', linestyle=''),]
     ax.legend(handles=legend_elements)
     scatter_b64 = fig_to_base64(fig_scatter)
 
@@ -55,6 +57,33 @@ def run_pipeline(csv_path: str):
     logreg = LogisticRegression(random_state=42)
     logreg.fit(X_train, y_train)
     y_pred = logreg.predict(X_test)
+
+    zlogreg = LogisticRegression(random_state=42)
+    zlogreg.fit(Z, y)
+    z_grid = np.linspace(Z.min()-5, Z.max()+5, 400).reshape(-1,1)
+    proba = zlogreg.predict_proba(z_grid)[:,1]
+    fig = plt.figure(figsize=[8,8])
+    plt.scatter(Z, y, alpha=0.5, label="Matches (0=loss, 1=win)")
+    plt.plot(z_grid, proba, label="Sigmoid Curve")
+    plt.xlabel("First Serve %")
+    plt.ylabel("Win Probability")
+    plt.title("Logistic Regression")
+    plt.legend()
+    fs_sigmoid64 = fig_to_base64(fig)
+
+    qlogreg = LogisticRegression(random_state=42)
+    qlogreg.fit(Q, y)
+    q_grid = np.linspace(Q.min()-5, Q.max()+5, 400).reshape(-1,1)
+    proba = qlogreg.predict_proba(q_grid)[:,1]
+    fig = plt.figure(figsize=[8,8])
+    plt.scatter(Q, y, alpha=0.5, label="Matches (0=loss, 1=win)")
+    plt.plot(q_grid, proba, label="Sigmoid Curve")
+    plt.xlabel("Double Faults")
+    plt.ylabel("Win Probability")
+    plt.title("Logistic Regression")
+    plt.legend()
+    df_sigmoid64 = fig_to_base64(fig)
+
 
     # 4) Confusion matrix heatmap
     cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
@@ -89,4 +118,6 @@ def run_pipeline(csv_path: str):
         "heatmap_b64": heatmap_b64,
         "auc_b64": auc_b64,
         "scatter_b64": scatter_b64,
+        "fs_sigmoid64": fs_sigmoid64,
+        "df_sigmoid64": df_sigmoid64,
     }

@@ -13,33 +13,73 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # adjust if 
 # 3) Load Django apps/settings
 django.setup()
 
-# 4) Now it's safe to import models
-from tennis.models import Tournament, Player, Match
 
-
-#from src.Player import Player
 import src.codes.codes as codes
-from src.dataclasses.MatchData import MatchData
-from src.dataclasses.PlayerMatch import PlayerMatch
 from src.initializing.dataHandler import create_df
 from natsort import natsort_keygen
-
-from typing import Dict
 import re
-
 from tennis.models import Tournament, Match, Player
 
 
 def main():
 
     df = create_df()
+    print(df['match_id'].nunique())
 
-    serve_df = create_serve_df(df)
+    """serve_df = create_serve_df(df)
 
 
+    create_players(serve_df)"""
 
+    matches = Match.objects.all()
+    ps = []
+    p_fs_pcts = []
+    p_ss_pcts = []
+    p_dfs = []
+    m = []
+    wl = []
 
-    create_players(df)
+    for match in matches:
+        m.append(match.match_id)
+        m.append(match.match_id)
+
+        player1 = match.player1.name
+        ps.append(player1)
+        player2 = match.player2.name
+        ps.append(player2)
+
+        p1_fs_pct = match.p1_first_serve_pctg
+        p_fs_pcts.append(p1_fs_pct)
+        p2_fs_pct = match.p2_first_serve_pctg
+        p_fs_pcts.append(p2_fs_pct)
+
+        p1_ss_pct = match.p1_second_serve_pctg
+        p_ss_pcts.append(p1_ss_pct)
+        p2_ss_pct = match.p2_second_serve_pctg
+        p_ss_pcts.append(p2_ss_pct)
+
+        p1_df = match.p1_double_faults
+        p_dfs.append(p1_df)
+        p2_df = match.p2_double_faults
+        p_dfs.append(p2_df)
+
+        if match.winner == match.player1:
+            wl.append(True)
+            wl.append(False)
+        else:
+            wl.append(False)
+            wl.append(True)
+
+    data = {'Player': ps,
+            'Match': m,
+            'first_serve_pctg': p_fs_pcts,
+            'second_serve_pctg': p_ss_pcts,
+            'double_faults': p_dfs,
+            'win': wl}
+
+    new_df = pd.DataFrame(data)
+    new_df.to_csv('~/WGU/tennisPrediction/data/matches.csv', index=False)
+
 
 
 def create_players(df):
@@ -77,16 +117,21 @@ def create_players(df):
             p1_first_serve_pctg, p1_second_serve_pctg, p1_double_faults = get_serve_percents(g, "1")
             p2_first_serve_pctg, p2_second_serve_pctg, p2_double_faults = get_serve_percents(g, "2")
 
+
+
             match, created = Match.objects.update_or_create(
                 player1 = p1_object,
                 player2 = p2_object,
                 tournament = t,
                 defaults={
+                    "match_id": match_id_string,
                     "round": _round,
                     "winner":winner,
                 "loser":loser,
                 "p1_first_serve_pctg" : p1_first_serve_pctg,
                 "p2_first_serve_pctg" : p2_first_serve_pctg,
+                "p1_second_serve_pctg" : p1_second_serve_pctg,
+                "p2_second_serve_pctg" : p2_second_serve_pctg,
                 "p1_double_faults" : p1_double_faults,
                 "p2_double_faults" : p2_double_faults
                 }

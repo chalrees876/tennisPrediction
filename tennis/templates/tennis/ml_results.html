@@ -6,23 +6,16 @@
     <title>Document</title>
 </head>
 <body>
-<!--{% for tournament in tournaments %}
-
-<h1>{{tournament.name}} {{tournament.year}}</h1>
-
-<ul>
-  {% for match in tournament.matches.all %}
-    <li>{{ match.player1 }} vs {{ match.player2 }} – Winner: {{ match.winner }}</li>
-  {% empty %}
-    <li>No matches yet.</li>
-  {% endfor %}
-
-</ul>
-{% endfor %}-->
 <h2>Model Evaluation</h2>
 
 <h3>Train/Test Scatter Plot</h3>
 <img src="data:image/png;base64,{{ scatter }}" alt="Train/Test scatter" />
+
+<h3>First Serve % Sigmoid</h3>
+<img src="data:image/png;base64,{{ fs_sigmoid }}" alt="First Serve % Sigmoid scatter" />
+
+<h3>First Serve % Sigmoid</h3>
+<img src="data:image/png;base64,{{ df_sigmoid }}" alt="Double Fault Sigmoid scatter" />
 
 <h3>Confusion Matrix</h3>
 <img src="data:image/png;base64,{{ heatmap }}" alt="Confusion matrix" />
