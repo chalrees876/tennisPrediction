@@ -3,6 +3,8 @@ import io
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, roc_curve
 from sklearn import metrics
 import pandas as pd
@@ -58,6 +60,8 @@ def run_pipeline(csv_path: str):
     logreg.fit(X_train, y_train)
     y_pred = logreg.predict(X_test)
 
+
+    # First serve pct sigmoid
     zlogreg = LogisticRegression(random_state=42)
     zlogreg.fit(Z, y)
     z_grid = np.linspace(Z.min()-5, Z.max()+5, 400).reshape(-1,1)
@@ -71,6 +75,7 @@ def run_pipeline(csv_path: str):
     plt.legend()
     fs_sigmoid64 = fig_to_base64(fig)
 
+    # Double Fault sigmoid
     qlogreg = LogisticRegression(random_state=42)
     qlogreg.fit(Q, y)
     q_grid = np.linspace(Q.min()-5, Q.max()+5, 400).reshape(-1,1)
@@ -83,6 +88,27 @@ def run_pipeline(csv_path: str):
     plt.title("Logistic Regression")
     plt.legend()
     df_sigmoid64 = fig_to_base64(fig)
+
+    # Decision Boundary
+    clf = make_pipeline(StandardScaler(), LogisticRegression(random_state=42))
+    clf.fit(X,y)
+    x1 = np.linspace(X[:,0].min() - 2, X[:, 0].max() + 2, 300)
+    x2 = np.linspace(X[:,1].min() - 2, X[:,1].max() + 2, 300)
+    xx, yy = np.meshgrid(x1, x2)
+    grid = np.c_[xx.ravel(), yy.ravel()]
+    proba = clf.predict_proba(grid)[:,1].reshape(xx.shape)
+    fig, ax = plt.subplots()
+    cs = ax.contourf(xx,yy,proba,levels=np.linspace(0,1,11), alpha=0.7)
+    ax.contour(xx,yy,proba, levels=[0.5], linewidths=2)
+    ax.contour(xx,yy,proba, levels=[0.25, 0.75], linestyles="--")
+    ax.scatter(X[y == 0, 0], X[y == 0, 1], marker='o', facecolors='none', edgecolors='k', label='Loss (0)')
+    ax.scatter(X[y == 1, 0], X[y == 1, 1], marker='^', label='Win  (1)')
+    ax.set_xlabel("First Serve %")
+    ax.set_ylabel("Double Faults")
+    ax.set_title("Logistic Regression: Decision Boundary & Probability Contours")
+    ax.legend(loc="best")
+    fig.colorbar(cs, ax=ax, label="P(Win)")
+    db64 = fig_to_base64(fig)
 
 
     # 4) Confusion matrix heatmap
@@ -120,4 +146,5 @@ def run_pipeline(csv_path: str):
         "scatter_b64": scatter_b64,
         "fs_sigmoid64": fs_sigmoid64,
         "df_sigmoid64": df_sigmoid64,
+        "db64": db64,
     }

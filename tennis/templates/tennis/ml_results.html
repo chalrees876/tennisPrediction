@@ -1,12 +1,45 @@
+
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+
+  <!-- If the dropdown opens behind modals/navbars -->
+  <style>.select2-container { z-index: 9999; width: 100% !important; }</style>
 </head>
 <body>
 <h2>Model Evaluation</h2>
+
+
+<form method="post">
+  {{ form.player.label_tag }}
+  {{ form.player }}
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+  $(function () {
+    $("#player_select").select2({
+      placeholder: "Search player…",
+      width: "100%",
+      ajax: {
+        url: "{% url 'player_search' %}",
+        dataType: "json",
+        delay: 150,
+        data: params => ({ search: params.term || "" }),
+        processResults: data => ({ results: data.results })
+      },
+      minimumInputLength: 1,
+      allowClear: true
+    });
+  });
+</script>
+
 
 <h3>Train/Test Scatter Plot</h3>
 <img src="data:image/png;base64,{{ scatter }}" alt="Train/Test scatter" />
@@ -16,6 +49,9 @@
 
 <h3>First Serve % Sigmoid</h3>
 <img src="data:image/png;base64,{{ df_sigmoid }}" alt="Double Fault Sigmoid scatter" />
+
+<h3>Decision Boundary</h3>
+<img src="data:image/png;base64,{{ db }}" alt="Decision Boundary scatter" />
 
 <h3>Confusion Matrix</h3>
 <img src="data:image/png;base64,{{ heatmap }}" alt="Confusion matrix" />
