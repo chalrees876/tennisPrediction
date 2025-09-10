@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django import forms
 # Create your models here.
 
 class Player(models.Model):
@@ -52,4 +53,11 @@ class Match(models.Model):
 
     def __str__(self):
         return f"{self.player1} vs {self.player2}"
+
+class MatchForm(forms.Form):
+    player = forms.ModelChoiceField(
+        queryset=Player.objects.none(),
+        widget=forms.Select(attrs={'id': 'player_select'})
+    )
+
 
