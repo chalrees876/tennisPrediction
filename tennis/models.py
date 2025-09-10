@@ -27,7 +27,7 @@ class Match(models.Model):
     player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player2")
     winner = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="winner")
     loser = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="loser")
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="tournament")
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="matches")
     round = models.TextField(max_length=50)
     p1_first_serve_pctg = models.FloatField()
     p2_first_serve_pctg = models.FloatField()

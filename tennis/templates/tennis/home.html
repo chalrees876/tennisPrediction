@@ -6,13 +6,33 @@
     <title>Document</title>
 </head>
 <body>
-{%for match in matches%}
-    <h1>MATCH</h1>
-     <h5>Tournament: {{match.tournament.name}} {{match.tournament.year}}</h5>
-    <h5>Round: {{match.round}}</h5>
-    <h5>Player 1: {{match.player1}}</h5>
-    <h5>Player 2: {{match.player2}}</h5>
-    <h5>Winner: {{match.winner}}</h5>
-{%endfor%}
+<!--{% for tournament in tournaments %}
+
+<h1>{{tournament.name}} {{tournament.year}}</h1>
+
+<ul>
+  {% for match in tournament.matches.all %}
+    <li>{{ match.player1 }} vs {{ match.player2 }} – Winner: {{ match.winner }}</li>
+  {% empty %}
+    <li>No matches yet.</li>
+  {% endfor %}
+
+</ul>
+{% endfor %}-->
+<h2>Model Evaluation</h2>
+
+<h3>Train/Test Scatter Plot</h3>
+<img src="data:image/png;base64,{{ scatter }}" alt="Train/Test scatter" />
+
+<h3>Confusion Matrix</h3>
+<img src="data:image/png;base64,{{ heatmap }}" alt="Confusion matrix" />
+
+<h3>Classification Report</h3>
+<pre style="white-space: pre-wrap">{{ cr }}</pre>
+
+<h3>AUC Curve</h3>
+<img src="data:image/png;base64,{{ auc }}" alt="ROC curve" />
+
+
 </body>
 </html>
