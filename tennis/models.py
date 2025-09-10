@@ -23,6 +23,7 @@ class Tournament(models.Model):
         return self.name
 
 class Match(models.Model):
+    match_id = models.TextField(max_length=100)
     player1 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player1")
     player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player2")
     winner = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="winner")
@@ -31,6 +32,8 @@ class Match(models.Model):
     round = models.TextField(max_length=50)
     p1_first_serve_pctg = models.FloatField()
     p2_first_serve_pctg = models.FloatField()
+    p1_second_serve_pctg = models.FloatField()
+    p2_second_serve_pctg = models.FloatField()
     p1_double_faults = models.IntegerField()
     p2_double_faults = models.IntegerField()
 
