@@ -23,10 +23,14 @@ def fig_to_base64(fig):
     buffer.seek(0)
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-def run_pipeline(csv_path: str):
+def run_pipeline(csv_path: str, player=None):
     # 1) Load + prepare
     df = pd.read_csv(csv_path)
     enc = OrdinalEncoder(categories=[[False, True]])  # False->0, True->1
+    if player:
+        print(player)
+        df = df[df['Player'] == player]
+        print(df.head())
     df["win"] = enc.fit_transform(df[["win"]])
 
     X = df[["first_serve_pctg", "double_faults"]].values

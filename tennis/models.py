@@ -56,8 +56,16 @@ class Match(models.Model):
 
 class MatchForm(forms.Form):
     player = forms.ModelChoiceField(
-        queryset=Player.objects.none(),
+        queryset=Player.objects.all(),
         widget=forms.Select(attrs={'id': 'player_select'})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # If the form is bound (GET), include the submitted choice in the queryset
+        if self.is_bound:
+            raw = self.data.get(self.add_prefix("player")) or self.data.get("player")
+            if raw:
+                self.fields["player"].queryset = Player.objects.filter(pk=raw)
 
 
