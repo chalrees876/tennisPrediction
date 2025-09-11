@@ -28,9 +28,7 @@ def run_pipeline(csv_path: str, player=None):
     df = pd.read_csv(csv_path)
     enc = OrdinalEncoder(categories=[[False, True]])  # False->0, True->1
     if player:
-        print(player)
         df = df[df['Player'] == player]
-        print(df.head())
     df["win"] = enc.fit_transform(df[["win"]])
 
     X = df[["first_serve_pctg", "double_faults"]].values
