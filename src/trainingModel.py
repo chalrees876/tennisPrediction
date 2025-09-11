@@ -82,7 +82,7 @@ def run_pipeline(csv_path: str, player=None):
     # Double Fault sigmoid
     qlogreg = LogisticRegression(random_state=42)
     qlogreg.fit(Q, y)
-    q_grid = np.linspace(Q.min()-5, Q.max()+5, 400).reshape(-1,1)
+    q_grid = np.linspace(Q.min(), Q.max(), 400).reshape(-1,1)
     proba = qlogreg.predict_proba(q_grid)[:,1]
     fig = plt.figure(figsize=[8,8])
     plt.scatter(Q, y, alpha=0.5, label="Matches (0=loss, 1=win)")
