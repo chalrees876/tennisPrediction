@@ -19,6 +19,11 @@ def home(request):
 
 # Create your views here.
 def all_players(request):
+    form = MatchForm(request.GET or None)
+    selected_player = None
+    if form.is_valid():
+        selected_player = form.cleaned_data['player']
+        return redirect('single_player', pk=selected_player.pk)
     players = Player.objects.all()
     tournaments = Tournament.objects.all()
     matches = Match.objects.all()
@@ -37,12 +42,18 @@ def all_players(request):
         'fs_sigmoid': pipeline['fs_sigmoid64'],
         'df_sigmoid': pipeline['df_sigmoid64'],
         'db': pipeline['db64'],
+        'form': form,
     }
 
     return render(request, 'tennis/ml_results.html', context=context)
 
 # Create your views here.
 def single_player(request, pk):
+    form = MatchForm(request.GET or None)
+    selected_player = None
+    if form.is_valid():
+        selected_player = form.cleaned_data['player']
+        return redirect('single_player', pk=selected_player.pk)
     players = Player.objects.all()
     tournaments = Tournament.objects.all()
     matches = Match.objects.all()
@@ -52,27 +63,29 @@ def single_player(request, pk):
         pipeline = model.run_pipeline('~/WGU/tennisPrediction/data/matches.csv', name)
     else:
         pipeline = model.run_pipeline('~/WGU/tennisPrediction/data/matches.csv')
+    if pipeline:
+        context = {
+            'players': players,
+            'tournaments': tournaments,
+            'matches': matches,
+            'cnf_matrix': pipeline['confusion_matrix'],
+            'heatmap': pipeline['heatmap_b64'],
+            'cr': pipeline['classification_report'],
+            'auc': pipeline['auc_b64'],
+            'scatter': pipeline['scatter_b64'],
+            'fs_sigmoid': pipeline['fs_sigmoid64'],
+            'df_sigmoid': pipeline['df_sigmoid64'],
+            'db': pipeline['db64'],
+            'player': name,
+            'form': form,
+        }
 
-
-    context = {
-        'players': players,
-        'tournaments': tournaments,
-        'matches': matches,
-        'cnf_matrix': pipeline['confusion_matrix'],
-        'heatmap': pipeline['heatmap_b64'],
-        'cr': pipeline['classification_report'],
-        'auc': pipeline['auc_b64'],
-        'scatter': pipeline['scatter_b64'],
-        'fs_sigmoid': pipeline['fs_sigmoid64'],
-        'df_sigmoid': pipeline['df_sigmoid64'],
-        'db': pipeline['db64'],
-        'player': name,
-    }
-
-    if name:
-        return render(request, 'tennis/player_result.html', context=context)
+        if name:
+            return render(request, 'tennis/player_result.html', context=context)
+        else:
+            return render(request, 'tennis/ml_results.html', context=context)
     else:
-        return render(request, 'tennis/ml_results.html', context=context)
+        return render(request, 'tennis/error.html', context={'name': name})
 
 def player_search(request):
     query = request.GET.get('search', '').strip()
