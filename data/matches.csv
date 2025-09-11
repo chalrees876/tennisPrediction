@@ -327,8 +327,8 @@ Daniel Elahi Galan,20210110-M-Delray_Beach-R16-Daniel_Elahi_Galan-Hubert_Hurkacz
 Hubert Hurkacz,20210110-M-Delray_Beach-R16-Daniel_Elahi_Galan-Hubert_Hurkacz,60.5,100.0,0,True
 Hubert Hurkacz,20210111-M-Delray_Beach-QF-Hubert_Hurkacz-Roberto_Quiroz,72.2,93.3,1,True
 Roberto Quiroz,20210111-M-Delray_Beach-QF-Hubert_Hurkacz-Roberto_Quiroz,63.2,96.0,1,False
-Alex De Minaur,100,77.8,100.0,0,True
-Alexander Bublik,100,50.0,100.0,1,False
+Alex De Minaur,20210113-M-Antalya-F-Alex_De_Minaur-Alexander_Bublik,77.8,100.0,0,True
+Alexander Bublik,20210113-M-Antalya-F-Alex_De_Minaur-Alexander_Bublik,50.0,66.7,1,False
 Andrey Rublev,20210202-M-ATP_Cup-RR-Andrey_Rublev-Guido_Pella,62.7,89.5,2,True
 Guido Pella,20210202-M-ATP_Cup-RR-Andrey_Rublev-Guido_Pella,62.2,82.4,3,False
 Tristan Schoolkate,20210202-M-Great_Ocean_Road_Open-R64-Tristan_Schoolkate-Botic_Van_De_Zandschulp,58.2,71.4,8,False
@@ -1329,8 +1329,8 @@ Stefanos Tsitsipas,20220329-M-Miami_Masters-R16-Stefanos_Tsitsipas-Carlos_Alcara
 Carlos Alcaraz,20220329-M-Miami_Masters-R16-Stefanos_Tsitsipas-Carlos_Alcaraz,69.4,90.9,2,True
 Casper Ruud,20220330-M-Miami_Masters-QF-Casper_Ruud-Alexander_Zverev,74.6,100.0,0,True
 Alexander Zverev,20220330-M-Miami_Masters-QF-Casper_Ruud-Alexander_Zverev,66.7,95.5,1,False
-Francisco Cerundolo,100,75.0,100.0,2,True
-Jannik Sinner,100,46.2,100.0,0,False
+Francisco Cerundolo,20220330-M-Miami_Masters-QF-Francisco_Cerundolo-Jannik_Sinner,75.0,60.0,2,True
+Jannik Sinner,20220330-M-Miami_Masters-QF-Francisco_Cerundolo-Jannik_Sinner,46.2,100.0,0,False
 Hubert Hurkacz,20220331-M-Miami_Masters-QF-Hubert_Hurkacz-Daniil_Medvedev,71.9,88.9,2,True
 Daniil Medvedev,20220331-M-Miami_Masters-QF-Hubert_Hurkacz-Daniil_Medvedev,52.1,84.4,7,False
 Miomir Kecmanovic,20220331-M-Miami_Masters-QF-Miomir_Kecmanovic-Carlos_Alcaraz,67.4,100.0,0,False
@@ -4151,8 +4151,8 @@ Andrey Rublev,20240503-M-Madrid_Masters-SF-Andrey_Rublev-Taylor_Fritz,75.4,80.0,
 Taylor Fritz,20240503-M-Madrid_Masters-SF-Andrey_Rublev-Taylor_Fritz,55.3,100.0,0,False
 Lorenzo Musetti,20240504-M-Cagliari_CH-SF-Lorenzo_Musetti-Daniel_Elahi_Galan,66.7,100.0,0,True
 Daniel Elahi Galan,20240504-M-Cagliari_CH-SF-Lorenzo_Musetti-Daniel_Elahi_Galan,46.2,100.0,0,False
-Jiri Lehecka,100,78.9,100.0,0,False
-Felix Auger Aliassime,100,60.0,100.0,0,True
+Jiri Lehecka,20240504-M-Madrid_Masters-SF-Jiri_Lehecka-Felix_Auger_Aliassime,78.9,100.0,0,False
+Felix Auger Aliassime,20240504-M-Madrid_Masters-SF-Jiri_Lehecka-Felix_Auger_Aliassime,60.0,100.0,0,True
 Lorenzo Musetti,20240505-M-Cagliari_CH-F-Lorenzo_Musetti-Mariano_Navone,68.2,90.5,2,False
 Mariano Navone,20240505-M-Cagliari_CH-F-Lorenzo_Musetti-Mariano_Navone,80.0,83.3,2,True
 Andrey Rublev,20240505-M-Madrid_Masters-F-Andrey_Rublev-Felix_Auger_Aliassime,67.0,83.3,5,True
@@ -5037,8 +5037,8 @@ Reilly Opelka,20250104-M-Brisbane-SF-Reilly_Opelka-Giovanni_Mpetshi_Perricard,70
 Giovanni Mpetshi Perricard,20250104-M-Brisbane-SF-Reilly_Opelka-Giovanni_Mpetshi_Perricard,69.6,76.2,5,False
 Hubert Hurkacz,20250104-M-United_Cup-SF-Hubert_Hurkacz-Alexander_Shevchenko,76.1,100.0,0,True
 Alexander Shevchenko,20250104-M-United_Cup-SF-Hubert_Hurkacz-Alexander_Shevchenko,69.4,93.3,1,False
-Jiri Lehecka,100,66.7,100.0,0,True
-Reilly Opelka,100,100.0,100.0,0,False
+Jiri Lehecka,20250105-M-Brisbane-F-Jiri_Lehecka-Reilly_Opelka,66.7,100.0,0,True
+Reilly Opelka,20250105-M-Brisbane-F-Jiri_Lehecka-Reilly_Opelka,100.0,100.0,0,False
 Hubert Hurkacz,20250105-M-United_Cup-F-Hubert_Hurkacz-Taylor_Fritz,66.7,100.0,0,False
 Taylor Fritz,20250105-M-United_Cup-F-Hubert_Hurkacz-Taylor_Fritz,64.6,91.2,3,True
 Denis Shapovalov,20250106-M-Adelaide-R32-Denis_Shapovalov-Zhizhen_Zhang,59.3,81.8,4,True
@@ -5159,8 +5159,8 @@ Tallon Griekspoor,20250130-M-Montpellier-R16-Tallon_Griekspoor-Richard_Gasquet,7
 Richard Gasquet,20250130-M-Montpellier-R16-Tallon_Griekspoor-Richard_Gasquet,57.6,91.7,3,False
 Jesper De Jong,20250131-M-Montpellier-QF-Jesper_De_Jong-Tallon_Griekspoor,68.8,96.0,1,True
 Tallon Griekspoor,20250131-M-Montpellier-QF-Jesper_De_Jong-Tallon_Griekspoor,63.2,88.0,3,False
-Nikoloz Basilashvili,100,38.1,100.0,1,False
-Andrey Rublev,100,55.6,100.0,0,True
+Nikoloz Basilashvili,20250131-M-Montpellier-QF-Nikoloz_Basilashvili-Andrey_Rublev,38.1,92.3,1,False
+Andrey Rublev,20250131-M-Montpellier-QF-Nikoloz_Basilashvili-Andrey_Rublev,55.6,100.0,0,True
 Hamad Medjedovic,20250201-M-Davis_Cup_Qualifiers-RR-Hamad_Medjedovic-Elmer_Moller,61.3,87.1,4,False
 Elmer Moller,20250201-M-Davis_Cup_Qualifiers-RR-Hamad_Medjedovic-Elmer_Moller,54.4,88.9,4,True
 Ugo Humbert,20250201-M-Davis_Cup_Qualifiers-RR-Ugo_Humbert-Joao_Fonseca,49.2,93.3,2,True

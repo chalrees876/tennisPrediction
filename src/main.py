@@ -26,10 +26,10 @@ def main():
     df = create_df()
     print(df['match_id'].nunique())
 
-    """serve_df = create_serve_df(df)
+    serve_df = create_serve_df(df)
 
 
-    create_players(serve_df)"""
+    create_players(serve_df)
 
     matches = Match.objects.all()
     ps = []
@@ -186,13 +186,13 @@ def set_is_fault_and_snv(df: pd.DataFrame) -> pd.DataFrame:
     copy = df.copy()
     copy['1st'] = copy['1st'].str.replace('+', '')
     copy['2nd'] = copy['2nd'].str.replace('+', '')
-    first_miss_code = copy['1st'].str[1]
-    first_miss_code = first_miss_code.map(codes.error_code)
-    df['1st Is Fault'] = pd.notnull(first_miss_code)
-    df['2nd Is Fault'] = pd.notnull(copy['2nd'].str[1].map(codes.error_code))
-
-    #foot fault
     df['1st Is Fault'] = pd.notnull(df['2nd'])
+
+    #if the server won the point
+    if (df['PtWinner'].str.contains("1").bool() == df['Svr'].str.contains("1").bool()) | (df['PtWinner'].str.contains("2").bool() == df['Svr'].str.contains("2").bool()):
+        df['2nd Is Fault'] = False
+    else:
+        df['2nd Is Fault'] = pd.notnull(copy['2nd'].str[1].map(codes.error_code))
     return df
 
 def set_serve_direction(df):

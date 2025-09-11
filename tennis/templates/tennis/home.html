@@ -8,8 +8,6 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
 
-  <!-- If the dropdown opens behind modals/navbars -->
-  <style>.select2-container { z-index: 9999; width: 100% !important; }</style>
 </head>
 <body>
 <h1>Tennis Machine Learning Model: How Serving Metrics Affect Win Percentages</h1>
@@ -33,7 +31,7 @@
   $(function () {
     $("#player_select").select2({
       placeholder: "Search player…",
-      width: "100%",
+      width: "30%",
       ajax: {
         url: "{% url 'player_search' %}",
         dataType: "json",
