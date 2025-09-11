@@ -1,14 +1,39 @@
-<!DOCTYPE html>
+
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+
 </head>
 <body>
-{% for player in results %}
-<h1>{{ player.name }}</h1>
+<h2>Evaluation of {{ player }}</h2>
 
-{% endfor %}
+<h3>Train/Test Scatter Plot</h3>
+<img src="data:image/png;base64,{{ scatter }}" alt="Train/Test scatter" />
+
+<h3>First Serve % Sigmoid</h3>
+<img src="data:image/png;base64,{{ fs_sigmoid }}" alt="First Serve % Sigmoid scatter" />
+
+<h3>First Serve % Sigmoid</h3>
+<img src="data:image/png;base64,{{ df_sigmoid }}" alt="Double Fault Sigmoid scatter" />
+
+<h3>Decision Boundary</h3>
+<img src="data:image/png;base64,{{ db }}" alt="Decision Boundary scatter" />
+
+<h3>Confusion Matrix</h3>
+<img src="data:image/png;base64,{{ heatmap }}" alt="Confusion matrix" />
+
+<h3>Classification Report</h3>
+<pre style="white-space: pre-wrap">{{ cr }}</pre>
+
+<h3>AUC Curve</h3>
+<img src="data:image/png;base64,{{ auc }}" alt="ROC curve" />
+
 
 </body>
 </html>
