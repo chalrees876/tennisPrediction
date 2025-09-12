@@ -187,12 +187,7 @@ def set_is_fault_and_snv(df: pd.DataFrame) -> pd.DataFrame:
     copy['1st'] = copy['1st'].str.replace('+', '')
     copy['2nd'] = copy['2nd'].str.replace('+', '')
     df['1st Is Fault'] = pd.notnull(df['2nd'])
-
-    #if the server won the point
-    if (df['PtWinner'].str.contains("1").bool() == df['Svr'].str.contains("1").bool()) | (df['PtWinner'].str.contains("2").bool() == df['Svr'].str.contains("2").bool()):
-        df['2nd Is Fault'] = False
-    else:
-        df['2nd Is Fault'] = pd.notnull(copy['2nd'].str[1].map(codes.error_code))
+    df['2nd Is Fault'] = pd.notnull(copy['2nd'].str[1].map(codes.error_code))
     return df
 
 def set_serve_direction(df):
