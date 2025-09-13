@@ -3,9 +3,7 @@ venv/
 .venv/
 env/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 *.egg-info/
 build/
 dist/
@@ -14,13 +12,11 @@ dist/
 # Node
 node_modules/
 
-# Data / models (keep small ones if you want)
+# Large artifacts (keep small if you want)
 *.joblib
 *.pkl
-data/*.parquet
-data/*.feather
 
-# OS/editor
+# OS/IDE
 .DS_Store
 .idea/
 .vscode/
