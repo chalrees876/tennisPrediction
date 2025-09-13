@@ -1,0 +1,26 @@
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+build/
+dist/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+
+# Data / models (keep small ones if you want)
+*.joblib
+*.pkl
+data/*.parquet
+data/*.feather
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
