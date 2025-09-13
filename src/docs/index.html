@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Your Page Title</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<script type="module">
+(async () => {
+  const model = await fetch('./model.json').then(r => r.json());
+  const { intercept, coef } = model;
+
+  function predict(fs, df) {
+    const z = intercept + coef[0]*fs + coef[1]*df;
+    const p = 1/(1+Math.exp(-z));
+    return p;
+  }
+
+  // tiny demo:
+  const fsInput = document.querySelector('#fs');
+  const dfInput = document.querySelector('#df');
+  const out = document.querySelector('#out');
+  const update = () => out.textContent = `Win probability: ${(predict(+fsInput.value, +dfInput.value)*100).toFixed(1)}%`;
+
+  fsInput.addEventListener('input', update);
+  dfInput.addEventListener('input', update);
+  update();
+})();
+</script>
+
+    <script src="script.js"></script>
+</body>
+</html>

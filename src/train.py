@@ -5,9 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from src.trainingModel import run_pipeline as run_pipeline
 
-CSV = "data/matches.csv"  # has columns: first_serve_pctg, double_faults, win
-
-run_pipeline(CSV)
+CSV = "../data/matches.csv"  # has columns: first_serve_pctg, double_faults, win
 
 df = pd.read_csv(CSV)
 X = df[["first_serve_pctg", "double_faults"]].values
