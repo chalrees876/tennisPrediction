@@ -1,37 +1,104 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Your Page Title</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Tennis Match Win Probability (Static Demo)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0b1f5e; --card:#fff; --text:#0a0a0a; --muted:#666; }
+    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; background: #f6f8fb; color: var(--text);}
+    header { background: var(--bg); color:#fff; padding: 24px; }
+    header h1 { margin: 0; font-size: clamp(20px, 3vw, 28px); }
+    main { max-width: 820px; margin: 24px auto; padding: 0 16px; }
+    .card { background: var(--card); border-radius:16px; box-shadow: 0 8px 28px rgba(0,0,0,.08); padding:20px; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    label { font-size: 14px; color: var(--muted); display:block; margin-bottom:6px;}
+    input[type="number"] { width: 100%; padding:10px 12px; border:1px solid #ddd; border-radius: 10px; font-size:16px;}
+    .result { font-size: 20px; font-weight:600; margin-top: 14px; }
+    .err { color:#b00020; font-size:14px; margin-top:8px; }
+    .small { font-size:12px; color:var(--muted); }
+    .footer { text-align:center; color:var(--muted); font-size:12px; margin-top:18px; }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Tennis Match Win Probability — Logistic Regression (Static)</h1>
+    <div class="small">Predicts based on First-serve % and Double Faults using exported model coefficients.</div>
+  </header>
 
-<script type="module">
-(async () => {
-  const model = await fetch('./model.json').then(r => r.json());
-  const { intercept, coef } = model;
+  <main>
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="fs">First-serve %</label>
+          <input id="fs" type="number" step="0.1" min="0" max="100" value="65">
+        </div>
+        <div>
+          <label for="df">Double faults</label>
+          <input id="df" type="number" step="1" min="0" value="3">
+        </div>
+      </div>
 
-  function predict(fs, df) {
-    const z = intercept + coef[0]*fs + coef[1]*df;
-    const p = 1/(1+Math.exp(-z));
-    return p;
-  }
+      <div id="out" class="result">Win probability: —</div>
+      <div id="err" class="err" hidden></div>
+      <div class="small" style="margin-top:10px;">
+        Uses model from <code>docs/model.json</code>. Feature order: <code>["first_serve_pctg","double_faults"]</code>.
+      </div>
+    </div>
 
-  // tiny demo:
-  const fsInput = document.querySelector('#fs');
-  const dfInput = document.querySelector('#df');
-  const out = document.querySelector('#out');
-  const update = () => out.textContent = `Win probability: ${(predict(+fsInput.value, +dfInput.value)*100).toFixed(1)}%`;
+    <div class="footer">Static demo for GitHub Pages · No backend required</div>
+  </main>
 
-  fsInput.addEventListener('input', update);
-  dfInput.addEventListener('input', update);
-  update();
-})();
-</script>
+  <script type="module">
+    const MODEL_URL = './model.json';
 
-    <script src="script.js"></script>
+    function sigmoid(z){ return 1 / (1 + Math.exp(-z)); }
+
+    function makePredictor(model){
+      const { intercept, coef, feature_order } = model;
+      if (!Array.isArray(coef) || typeof intercept !== 'number') throw new Error('Invalid model.json');
+      // If you later standardize features, apply the same transform here
+      return (fs, df) => sigmoid(intercept + coef[0]*fs + coef[1]*df);
+    }
+
+    async function loadModel(){
+      const res = await fetch(MODEL_URL, { cache: 'no-store' });
+      if(!res.ok) throw new Error(`Fetch ${MODEL_URL} failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function main(){
+      const fsEl = document.querySelector('#fs');
+      const dfEl = document.querySelector('#df');
+      const outEl = document.querySelector('#out');
+      const errEl = document.querySelector('#err');
+      let predict = null;
+
+      try {
+        const model = await loadModel();
+        predict = makePredictor(model);
+      } catch (e) {
+        errEl.hidden = false;
+        errEl.textContent = `Model load error: ${e.message}. Did you commit docs/model.json?`;
+        console.error(e);
+        // Fallback (optional): neutral model so UI still works
+        const fallback = { intercept: 0, coef: [0.02, -0.15], feature_order:["first_serve_pctg","double_faults"] };
+        predict = makePredictor(fallback);
+      }
+
+      const update = () => {
+        const fs = Number(fsEl.value || 0);
+        const df = Number(dfEl.value || 0);
+        const p = predict(fs, df);
+        outEl.textContent = `Win probability: ${(p*100).toFixed(1)}%`;
+      };
+
+      fsEl.addEventListener('input', update);
+      dfEl.addEventListener('input', update);
+      update();
+    }
+
+    main();
+  </script>
 </body>
 </html>
