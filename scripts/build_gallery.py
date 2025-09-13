@@ -82,9 +82,9 @@ def main():
 
     # Map keys -> titles. Add/remove keys to match what your pipeline returns.
     FIG_MAP: list[tuple[str, str]] = [
-        ("Confusion Matrix",    "heatmap_b64"),
+        ("Confusion Matrix",    "confusion_matrix"),
         ("ROC Curve",           "auc_b64"),
-        ("Classification Report", "classification_report"),
+        ("Classification Report", "cr"),
         ("Heatmap", "heatmap"),
         ("ROC Curve", "auc_b64"),
         ("Decision Boundary",   "db64"),
