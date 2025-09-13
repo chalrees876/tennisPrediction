@@ -1,13 +1,15 @@
 # scripts/build_gallery.py
 from pathlib import Path
-import base64
-import datetime as dt
+import argparse, base64, importlib, sys, datetime as dt
 
-# 1) import your pipeline (adjust this import/name to match your code)
-# e.g., from model import run_pipeline_from_csv
-from models import run_pipeline_from_csv   # <- CHANGE if your module is named differently
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))  # allow importing modules from repo root
 
-CSV = "data/matches.csv"                  # <- CHANGE path if needed
+def import_pipeline(module_name, func_name):
+    mod = importlib.import_module(module_name)
+    fn = getattr(mod, func_name)
+    return fn
+CSV = "./data/matches.csv"                  # <- CHANGE path if needed
 OUT = Path("docs"); OUT.mkdir(exist_ok=True)
 IMG = OUT / "img"; IMG.mkdir(exist_ok=True)
 
@@ -19,10 +21,50 @@ def write_png(name: str, b64: str | None):
     return f"img/{fn}"
 
 def main():
-    res = run_pipeline_from_csv(CSV)
-    # Map your result keys -> readable titles (add/remove as your pipeline provides)
+    p = argparse.ArgumentParser()
+    p.add_argument("--csv", default="data/matches.csv")
+    p.add_argument("--module", default=None, help="module path for pipeline, e.g. models or trainingModel")
+    p.add_argument("--func", default=None, help="function name, e.g. run_pipeline_from_csv")
+    args = p.parse_args()
+
+    # try explicit module/func or common fallbacks
+    candidates = []
+    if args.module and args.func:
+        candidates.append((args.module, args.func))
+    candidates += [
+        ("src", "trainingModel"),
+        ("model", "run_pipeline"),
+        ("trainingModel", "run_pipeline"),
+        ("models", "run_pipeline"),
+    ]
+
+    pipeline = None
+    errors = []
+    for mod, fn in candidates:
+        try:
+            pipeline = import_pipeline(mod, fn)
+            print(f"✓ Using pipeline {mod}.{fn}")
+            break
+        except Exception as e:
+            errors.append(f"{mod}.{fn}: {e}")
+
+    if pipeline is None:
+        raise ImportError(
+            "Could not import your pipeline function.\nTried:\n- " + "\n- ".join(errors) +
+            "\n\nFix by passing --module and --func that match your project.\n"
+            "Example: python scripts/build_gallery.py --module models --func run_pipeline_from_csv"
+        )
+
+    OUT = ROOT / "docs"
+    IMG = OUT / "img"
+    OUT.mkdir(exist_ok=True)
+
+    res = pipeline(args.csv)  # must return dict of base64 images + text
+
     figures = [
-        ("Confusion Matrix",  res.get("heatmap_b64")),
+        ("Confusion Matrix",  res.get("confusion_matrix")),
+        ("Classification Report", res.get("classification_report")),
+        ("Heatmap", res.get("heatmap")),
         ("ROC Curve",         res.get("auc_b64")),
         ("Decision Boundary", res.get("db64")),
         ("Feature Scatter",   res.get("scatter_b64")),
