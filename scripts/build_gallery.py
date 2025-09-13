@@ -100,39 +100,5 @@ def main():
         if paths:
             gallery_items.append((title, paths))
 
-    cr_html = (res.get("classification_report") or "").replace("\n", "<br>")
-
-    html = f"""<!doctype html>
-<html lang="en"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tennis ML — Results Gallery</title>
-<style>
-  body{{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;margin:24px;background:#f6f8fb;color:#0a0a0a}}
-  h1{{margin:.2em 0}} .sub{{color:#666}}
-  .grid{{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}}
-  figure{{margin:0;background:#fff;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.06);padding:12px}}
-  figcaption{{font-size:.95rem;opacity:.85;margin-top:8px}}
-  img{{width:100%;height:auto;border-radius:10px;display:block}}
-  pre{{background:#fff;border-radius:10px;padding:12px;overflow:auto;box-shadow:0 8px 28px rgba(0,0,0,.06)}}
-</style>
-<h1>Tennis Match Outcome — Results Gallery</h1>
-<div class="sub">Generated {dt.datetime.now().strftime("%Y-%m-%d %H:%M")} • Static build</div>
-
-<h2>Visualizations</h2>
-<div class="grid">
-  {''.join(
-    ''.join(f'<figure><img src="{p}" alt="{t}"><figcaption>{t}{(" #" + str(i+1)) if len(paths)>1 else ""}</figcaption></figure>'
-            for i, p in enumerate(paths))
-    for t, paths in gallery_items
-  )}
-</div>
-
-<h2 style="margin-top:24px">Classification Report</h2>
-<pre>{cr_html}</pre>
-</html>"""
-    (OUT / "index.html").write_text(html, encoding="utf-8")
-    (OUT / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"✅ Wrote docs/index.html with {sum(len(p) for _, p in gallery_items)} figure(s).")
-
 if __name__ == "__main__":
     main()
