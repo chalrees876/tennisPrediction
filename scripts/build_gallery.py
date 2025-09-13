@@ -1,87 +1,107 @@
+
 # scripts/build_gallery.py
 from pathlib import Path
 import argparse, base64, importlib, sys, datetime as dt
+from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))  # allow importing modules from repo root
+sys.path.insert(0, str(ROOT))  # import from repo root
 
-def import_pipeline(module_name, func_name):
+def import_pipeline(module_name: str, func_name: str):
     mod = importlib.import_module(module_name)
     fn = getattr(mod, func_name)
     return fn
-CSV = "./data/matches.csv"                  # <- CHANGE path if needed
-OUT = Path("docs"); OUT.mkdir(exist_ok=True)
-IMG = OUT / "img"; IMG.mkdir(exist_ok=True)
 
-def write_png(name: str, b64: str | None):
-    if not b64:
-        return None
-    fn = name.lower().replace(" ", "_").replace("/", "-") + ".png"
-    (IMG / fn).write_bytes(base64.b64decode(b64))
-    return f"img/{fn}"
+def _strip_data_uri(s: str) -> str:
+    # handles "data:image/png;base64,AAAA..." and plain "AAAA..."
+    return s.split(",")[-1].strip()
+
+def _ensure_list(x: Any) -> list:
+    if x is None:
+        return []
+    if isinstance(x, (list, tuple)):
+        return list(x)
+    return [x]
+
+def save_images(out_dir: Path, title: str, payload: Any) -> list[str]:
+    """
+    Accepts:
+      - base64 string
+      - list/tuple of base64 strings
+      - (optionally) Matplotlib Figure objects
+    Writes PNG(s) and returns relative paths like ["img/foo.png", ...]
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    items = _ensure_list(payload)
+    paths: list[str] = []
+
+    for idx, item in enumerate(items):
+        fn_base = title.lower().replace(" ", "_").replace("/", "-")
+        fn = f"{fn_base}.png" if len(items) == 1 else f"{fn_base}_{idx+1}.png"
+        dest = out_dir / fn
+
+        try:
+            if isinstance(item, str):
+                # base64 str (with or without data URI prefix)
+                b64 = _strip_data_uri(item)
+                dest.write_bytes(base64.b64decode(b64))
+                paths.append(f"img/{fn}")
+            elif hasattr(item, "savefig"):  # Matplotlib Figure
+                # lazy import to avoid hard dependency
+                import io
+                buf = io.BytesIO()
+                item.savefig(buf, format="png", bbox_inches="tight")
+                dest.write_bytes(buf.getvalue())
+                paths.append(f"img/{fn}")
+            elif isinstance(item, bytes):
+                dest.write_bytes(item)
+                paths.append(f"img/{fn}")
+            else:
+                print(f"[warn] Skipping unsupported type for '{title}': {type(item).__name__}")
+        except Exception as e:
+            print(f"[warn] Failed to save '{title}' item #{idx+1}: {e}")
+
+    return paths
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--csv", default="data/matches.csv")
-    p.add_argument("--module", default=None, help="module path for pipeline, e.g. models or trainingModel")
-    p.add_argument("--func", default=None, help="function name, e.g. run_pipeline_from_csv")
-    args = p.parse_args()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--csv", required=True, help="Path to CSV, e.g. data/matches.csv")
+    ap.add_argument("--module", required=True, help="Module with pipeline, e.g. src.trainingModel")
+    ap.add_argument("--func", required=True, help="Function name, e.g. run_pipeline")
+    args = ap.parse_args()
 
-    # try explicit module/func or common fallbacks
-    candidates = []
-    if args.module and args.func:
-        candidates.append((args.module, args.func))
-    candidates += [
-        ("src", "trainingModel"),
-        ("model", "run_pipeline"),
-        ("trainingModel", "run_pipeline"),
-        ("models", "run_pipeline"),
-    ]
-
-    pipeline = None
-    errors = []
-    for mod, fn in candidates:
-        try:
-            pipeline = import_pipeline(mod, fn)
-            print(f"✓ Using pipeline {mod}.{fn}")
-            break
-        except Exception as e:
-            errors.append(f"{mod}.{fn}: {e}")
-
-    if pipeline is None:
-        raise ImportError(
-            "Could not import your pipeline function.\nTried:\n- " + "\n- ".join(errors) +
-            "\n\nFix by passing --module and --func that match your project.\n"
-            "Example: python scripts/build_gallery.py --module models --func run_pipeline_from_csv"
-        )
+    pipeline = import_pipeline(args.module, args.func)
+    print(f"✓ Using pipeline {args.module}.{args.func}")
 
     OUT = ROOT / "docs"
     IMG = OUT / "img"
     OUT.mkdir(exist_ok=True)
 
-    res = pipeline(args.csv)  # must return dict of base64 images + text
+    # Run user pipeline; expected to return a dict of visuals & text
+    res = pipeline(args.csv)
 
-    figures = [
-        ("Confusion Matrix",  res.get("confusion_matrix")),
-        ("Classification Report", res.get("classification_report")),
-        ("Heatmap", res.get("heatmap")),
-        ("ROC Curve",         res.get("auc_b64")),
-        ("Decision Boundary", res.get("db64")),
-        ("Feature Scatter",   res.get("scatter_b64")),
-        ("First-Serve Sigmoid", res.get("fs_sigmoid64")),
-        ("Double-Faults Sigmoid", res.get("df_sigmoid64")),
+    # Map keys -> titles. Add/remove keys to match what your pipeline returns.
+    FIG_MAP: list[tuple[str, str]] = [
+        ("Confusion Matrix",    "heatmap_b64"),
+        ("ROC Curve",           "auc_b64"),
+        ("Classification Report", "classification_report"),
+        ("Heatmap", "heatmap"),
+        ("ROC Curve", "auc_b64"),
+        ("Decision Boundary",   "db64"),
+        ("Feature Scatter",     "scatter_b64"),
+        ("First-Serve Sigmoid", "fs_sigmoid64"),
+        ("Double-Fault Sigmoid","df_sigmoid64"),
     ]
 
-    items = []
-    for title, b64 in figures:
-        path = write_png(title, b64)
-        if path:
-            items.append((title, path))
+    gallery_items: list[tuple[str, list[str]]] = []
+    for title, key in FIG_MAP:
+        payload = res.get(key)
+        paths = save_images(IMG, title, payload)
+        if paths:
+            gallery_items.append((title, paths))
 
-    # Optional textual metrics
     cr_html = (res.get("classification_report") or "").replace("\n", "<br>")
 
-    # Minimal gallery HTML
     html = f"""<!doctype html>
 <html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -100,7 +120,11 @@ def main():
 
 <h2>Visualizations</h2>
 <div class="grid">
-  {''.join(f'<figure><img src="{p}" alt="{t}"><figcaption>{t}</figcaption></figure>' for t,p in items)}
+  {''.join(
+    ''.join(f'<figure><img src="{p}" alt="{t}"><figcaption>{t}{(" #" + str(i+1)) if len(paths)>1 else ""}</figcaption></figure>'
+            for i, p in enumerate(paths))
+    for t, paths in gallery_items
+  )}
 </div>
 
 <h2 style="margin-top:24px">Classification Report</h2>
@@ -108,7 +132,7 @@ def main():
 </html>"""
     (OUT / "index.html").write_text(html, encoding="utf-8")
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"✅ Wrote docs/index.html with {len(items)} figures.")
+    print(f"✅ Wrote docs/index.html with {sum(len(p) for _, p in gallery_items)} figure(s).")
 
 if __name__ == "__main__":
     main()
