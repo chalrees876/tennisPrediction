@@ -5,7 +5,7 @@ import pandas as pd
 import os, sys, django
 
 # 1) Make sure Python can find your project root (the folder with manage.py)
-sys.path.append('~/WGU/tennisPrediction')
+sys.path.append('..')
 
 # 2) Point to your settings module: "<project_package>.settings"
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # adjust if not "config"

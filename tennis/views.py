@@ -27,7 +27,7 @@ def all_players(request):
     players = Player.objects.all()
     tournaments = Tournament.objects.all()
     matches = Match.objects.all()
-    pipeline = model.run_pipeline('~/WGU/tennisPrediction/data/matches.csv')
+    pipeline = model.run_pipeline('./data/matches.csv')
 
 
     context = {
