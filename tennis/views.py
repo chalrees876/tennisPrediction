@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 
 from django.http.response import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -6,6 +7,8 @@ from django.urls.base import reverse
 
 from .models import Player, Tournament, Match, MatchForm
 import src.trainingModel as model
+
+DATA_PATH = str(Path(__file__).resolve().parent.parent / 'data' / 'cleaned' / 'matches.csv')
 
 
 def home(request):
@@ -27,7 +30,7 @@ def all_players(request):
     players = Player.objects.all()
     tournaments = Tournament.objects.all()
     matches = Match.objects.all()
-    pipeline = model.run_pipeline('./data/matches.csv')
+    pipeline = model.run_pipeline(DATA_PATH)
 
 
     context = {
@@ -60,9 +63,9 @@ def single_player(request, pk):
     name = None
     name = get_object_or_404(Player, pk=pk).name
     if name:
-        pipeline = model.run_pipeline('./data/matches.csv', name)
+        pipeline = model.run_pipeline(DATA_PATH, name)
     else:
-        pipeline = model.run_pipeline('./data/matches.csv')
+        pipeline = model.run_pipeline(DATA_PATH)
     if pipeline:
         context = {
             'players': players,

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 def create_df():
@@ -20,7 +22,11 @@ def create_df():
               'Notes': "string",
               'PtWinner': "string"}
 
-    df = pd.read_csv('~/WGU/tennisPrediction/data/charting-m-points-2020s.csv', dtype=dtypes)
+    HERE = Path(__file__).resolve().parent
+    PROJECT_ROOT = HERE.parent.parent
+    TARGET = PROJECT_ROOT / "data"
+
+    df = pd.read_csv('../data/charting-m-points-2020s.csv', dtype=dtypes)
 
     df['1st'] = df['1st'].str.replace('c', '')
     df['2nd'] = df['2nd'].str.replace('c', '')
