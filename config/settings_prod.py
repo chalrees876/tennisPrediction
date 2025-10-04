@@ -4,7 +4,6 @@ from .settings_base import *
 DEBUG = False
 ALLOWED_HOSTS = [os.environ.get("PUBLIC_HOST", "")]
 
-# Real secrets only from environment (set on the server)
 SECRET_KEY = os.environ["SECRET_KEY"]
 
 DATABASES = {
