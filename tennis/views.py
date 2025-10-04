@@ -60,9 +60,9 @@ def single_player(request, pk):
     name = None
     name = get_object_or_404(Player, pk=pk).name
     if name:
-        pipeline = model.run_pipeline('~/WGU/tennisPrediction/data/matches.csv', name)
+        pipeline = model.run_pipeline('./data/matches.csv', name)
     else:
-        pipeline = model.run_pipeline('~/WGU/tennisPrediction/data/matches.csv')
+        pipeline = model.run_pipeline('./data/matches.csv')
     if pipeline:
         context = {
             'players': players,
