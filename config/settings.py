@@ -128,4 +128,6 @@ STATIC_ROOT = "home/ubuntu/tennisapp/static"
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
+SESSION_COOKIE_SECURE = TRUE
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
