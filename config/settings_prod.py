@@ -2,7 +2,11 @@ import os
 from .settings_base import *
 
 DEBUG = False
-ALLOWED_HOSTS = [os.environ.get("PUBLIC_HOST", "")]
+import os
+
+ALLOWED_HOSTS = [h for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h]
+CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+
 
 SECRET_KEY = os.environ["SECRET_KEY"]
 
@@ -16,5 +20,3 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
-
-CSRF_TRUSTED_ORIGINS = [f'https://{os.environ.get("PUBLIC_HOST", "")}']
