@@ -26,7 +26,7 @@ def create_df():
     PROJECT_ROOT = HERE.parent.parent
     TARGET = PROJECT_ROOT / "data"
 
-    df = pd.read_csv('../data/charting-m-points-2020s.csv', dtype=dtypes)
+    df = pd.read_csv(str(TARGET) + "/charting-m-points-2020s.csv", dtype=dtypes)
 
     df['1st'] = df['1st'].str.replace('c', '')
     df['2nd'] = df['2nd'].str.replace('c', '')

@@ -5,13 +5,6 @@ import pandas as pd
 
 import os, sys, django
 
-sys.path.append('..')
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings_dev')  # adjust if not "config"
-
-django.setup()
-
-
 import src.codes.codes as codes
 from src.initializing.dataHandler import create_df
 from natsort import natsort_keygen
