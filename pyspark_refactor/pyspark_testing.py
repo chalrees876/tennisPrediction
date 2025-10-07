@@ -95,36 +95,24 @@ points_df = points_df.withColumns({
 
 points_df = points_df.withColumn('1st serve fault', points_df['2nd'].isNotNull())
 points_df = points_df.withColumn('2nd serve fault', F.substring(points_df['2nd'], 2, 1).isin(list(error_code.keys()))).fillna(False)
-points_df.show()
 test = points_df.groupBy(
         'match_id', 'Svr').agg(
         F.round((100 * F.sum((~F.col('1st serve fault')).cast('integer')) / F.count('1st'))).alias("first serve percent"),
         F.round((100 * F.sum((~F.col('2nd serve fault')).cast('integer')) / F.count('2nd serve fault'))).alias("second serve percent"),
         F.sum((F.col('2nd serve fault')).cast('integer')).alias("double faults")
     )
+test = test.groupBy('match_id').agg(
+    F.first(F.when(F.col('Svr')==1, F.col('first serve percent')), ignorenulls=True).alias('p1 fsp'),
+    F.first(F.when(F.col('Svr')==1, F.col('second serve percent')), ignorenulls=True).alias('p1 ssp'),
+    F.first(F.when(F.col('Svr')==1, F.col('double faults')), ignorenulls=True).alias('p1 df'),
+    F.first(F.when(F.col('Svr')==2, F.col('first serve percent')), ignorenulls=True).alias('p2 fsp'),
+    F.first(F.when(F.col('Svr')==2, F.col('second serve percent')), ignorenulls=True).alias('p2 fsp'),
+    F.first(F.when(F.col('Svr')==2, F.col('double faults')), ignorenulls=True).alias('p2 fsp')
+)
 test.sort('match_id').show(truncate=0)
-def get_serve_data(player_num, df):
-    serve_df = df.where(
-        F.col('Svr') == player_num).groupBy(
-        'match_id').agg(
-        F.round((100 * F.sum((~F.col('1st serve fault')).cast('integer')) / F.count('1st'))).alias(f"p{player_num}_fsp"),
-        F.round((100 * F.sum((~F.col('2nd serve fault')).cast('integer')) / F.count('2nd serve fault'))).alias(f"p{player_num}_ssp"),
-        F.sum((F.col('2nd serve fault')).cast('integer')).alias(f"p{player_num}_df")
-    )
 
-    return serve_df
-
-p1_serves = get_serve_data(1, points_df)
-p2_serves = get_serve_data(2, points_df)
-
-
-matches = matches.join(p1_serves, on='match_id', how='left')
-matches = matches.join(p2_serves, on='match_id', how='left')
-start_time = time.time()
+matches = matches.join(test, on='match_id', how='left' )
 matches.show()
-end_time = time.time()
-
-print(end_time - start_time)
 
 """matches = matches.withColumn('p1 fsp',
     points_df.where(F.col('Svr')==1).groupBy(
