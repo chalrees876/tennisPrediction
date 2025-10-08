@@ -6,10 +6,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls.base import reverse
 
 from .models import Player, Tournament, Match, MatchForm
-import src.trainingModel as model
-
-DATA_PATH = str(Path(__file__).resolve().parent.parent / 'data' / 'cleaned' / 'matches.csv')
-
+from .ml.training import run_pipeline
 
 def home(request):
     form = MatchForm(request.GET or None)
@@ -30,7 +27,7 @@ def all_players(request):
     players = Player.objects.all()
     tournaments = Tournament.objects.all()
     matches = Match.objects.all()
-    pipeline = model.run_pipeline(DATA_PATH)
+    pipeline = run_pipeline()
 
 
     context = {
@@ -63,9 +60,9 @@ def single_player(request, pk):
     name = None
     name = get_object_or_404(Player, pk=pk).name
     if name:
-        pipeline = model.run_pipeline(DATA_PATH, name)
+        pipeline = run_pipeline(name)
     else:
-        pipeline = model.run_pipeline(DATA_PATH)
+        pipeline = run_pipeline()
     if pipeline:
         context = {
             'players': players,
