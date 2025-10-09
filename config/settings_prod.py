@@ -4,9 +4,11 @@ from .settings_base import *
 DEBUG = False
 import os
 
-ALLOWED_HOSTS = [h for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h]
-CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+def _split_env(name):
+    return [x.strip() for x in os.environ.get(name, "").split(",") if x.strip()]
 
+ALLOWED_HOSTS = _split_env("ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = _split_env("CSRF_TRUSTED_ORIGINS")
 
 SECRET_KEY = os.environ["SECRET_KEY"]
 

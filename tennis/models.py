@@ -24,22 +24,19 @@ class Tournament(models.Model):
         return self.name
 
 class Match(models.Model):
-    match_id = models.TextField(max_length=100)
+    match_id = models.CharField(max_length=100, primary_key=True)
     player1 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player1")
     player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player2")
     winner = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="winner")
     loser = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="loser")
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="matches")
-    round = models.TextField(max_length=50)
+    round = models.CharField(max_length=50)
     p1_first_serve_pctg = models.FloatField()
     p2_first_serve_pctg = models.FloatField()
     p1_second_serve_pctg = models.FloatField()
     p2_second_serve_pctg = models.FloatField()
     p1_double_faults = models.IntegerField()
     p2_double_faults = models.IntegerField()
-
-    class Meta:
-        unique_together = ("player1", "player2", "tournament")
 
     def clean(self):
         if self.player1 == self.player2:
