@@ -12,14 +12,10 @@ import pandas as pd
 import matplotlib
 from matplotlib.lines import Line2D
 from django.db.models import F, Case, When, Value, BooleanField
-import django
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import seaborn as sns
 import numpy as np
-
-django.setup()
-from tennis.models import Player
 
 def fig_to_base64(fig):
     buffer = io.BytesIO()
@@ -30,7 +26,7 @@ def fig_to_base64(fig):
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 def run_pipeline(player=None):
-    from tennis.models import Match
+    from tennis.models import Match, Player, Tournament
     p1_qs = (
         Match.objects
         .select_related("player1", "winner")
