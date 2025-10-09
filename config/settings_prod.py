@@ -1,7 +1,5 @@
 import os
 from .settings_base import *
-
-DEBUG = True
 import os
 
 def _split_env(name):
@@ -23,16 +21,16 @@ DATABASES = {
     }
 }
 
-LOG_DIR = "/var/log/tennisapp"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        },
+        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
     },
     "handlers": {
         "file": {
@@ -42,26 +40,11 @@ LOGGING = {
             "backupCount": 5,
             "formatter": "standard",
         },
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "standard",
-        },
+        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
     },
-    "root": {
-        "handlers": ["file", "console"],
-        "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
-    },
+    "root": {"handlers": ["file", "console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO")},
     "loggers": {
-        "django.request": {  # uncaught exceptions in views end up here
-            "handlers": ["file", "console"],
-            "level": "ERROR",
-            "propagate": False,
-        },
-        # your project/app logs:
-        "tennis": {
-            "handlers": ["file", "console"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
+        "django.request": {"handlers": ["file", "console"], "level": "ERROR", "propagate": False},
+        "tennis": {"handlers": ["file", "console"], "level": "DEBUG", "propagate": False},
     },
 }
