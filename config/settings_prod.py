@@ -26,25 +26,35 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
+# Make sure logs go to ~/tennisapp/logs
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR.parent / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+        "verbose": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        },
     },
     "handlers": {
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(LOG_DIR, "django.log"),
-            "maxBytes": 5_000_000,
-            "backupCount": 5,
-            "formatter": "standard",
+        "app_file": {
+            "class": "logging.FileHandler",
+            "filename": str(LOG_DIR / "django.log"),
+            "formatter": "verbose",
         },
-        "console": {"class": "logging.StreamHandler", "formatter": "standard"},
     },
-    "root": {"handlers": ["file", "console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO")},
     "loggers": {
-        "django.request": {"handlers": ["file", "console"], "level": "ERROR", "propagate": False},
-        "tennis": {"handlers": ["file", "console"], "level": "DEBUG", "propagate": False},
+        # your custom logger used by views
+        "tennis": {"handlers": ["app_file"], "level": "INFO", "propagate": False},
+
+        # CRITICAL: log 500s/tracebacks raised by views/middleware
+        "django.request": {"handlers": ["app_file"], "level": "ERROR", "propagate": False},
+
+        # Optional: DB errors
+        "django.db.backends": {"handlers": ["app_file"], "level": "ERROR", "propagate": False},
     },
 }

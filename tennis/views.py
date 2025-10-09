@@ -4,9 +4,11 @@ from pathlib import Path
 from django.http.response import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls.base import reverse
-
+from django.http import HttpResponseServerError
 from .models import Player, Tournament, Match, MatchForm
 from .ml.training import run_pipeline
+import logging
+logger = logging.getLogger("tennis")
 
 def home(request):
     form = MatchForm(request.GET or None)
@@ -19,33 +21,37 @@ def home(request):
 
 # Create your views here.
 def all_players(request):
-    form = MatchForm(request.GET or None)
-    selected_player = None
-    if form.is_valid():
-        selected_player = form.cleaned_data['player']
-        return redirect('single_player', pk=selected_player.pk)
-    players = Player.objects.all()
-    tournaments = Tournament.objects.all()
-    matches = Match.objects.all()
-    pipeline = run_pipeline()
+    try:
+        form = MatchForm(request.GET or None)
+        selected_player = None
+        if form.is_valid():
+            selected_player = form.cleaned_data['player']
+            return redirect('single_player', pk=selected_player.pk)
+        players = Player.objects.all()
+        tournaments = Tournament.objects.all()
+        matches = Match.objects.all()
+        pipeline = run_pipeline()
 
 
-    context = {
-        'players': players,
-        'tournaments': tournaments,
-        'matches': matches,
-        'cnf_matrix': pipeline['confusion_matrix'],
-        'heatmap': pipeline['heatmap_b64'],
-        'cr': pipeline['classification_report'],
-        'auc': pipeline['auc_b64'],
-        'scatter': pipeline['scatter_b64'],
-        'fs_sigmoid': pipeline['fs_sigmoid64'],
-        'df_sigmoid': pipeline['df_sigmoid64'],
-        'db': pipeline['db64'],
-        'form': form,
-    }
+        context = {
+            'players': players,
+            'tournaments': tournaments,
+            'matches': matches,
+            'cnf_matrix': pipeline['confusion_matrix'],
+            'heatmap': pipeline['heatmap_b64'],
+            'cr': pipeline['classification_report'],
+            'auc': pipeline['auc_b64'],
+            'scatter': pipeline['scatter_b64'],
+            'fs_sigmoid': pipeline['fs_sigmoid64'],
+            'df_sigmoid': pipeline['df_sigmoid64'],
+            'db': pipeline['db64'],
+            'form': form,
+        }
 
-    return render(request, 'tennis/ml_results.html', context=context)
+        return render(request, 'tennis/ml_results.html', context=context)
+    except Exception:
+        logger.exception('Something went wrong')
+        return HttpResponseServerError('Something went wrong')
 
 # Create your views here.
 def single_player(request, pk):
