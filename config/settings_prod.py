@@ -5,7 +5,11 @@ import os
 def _split_env(name):
     return [x.strip() for x in os.environ.get(name, "").split(",") if x.strip()]
 
-ALLOWED_HOSTS = _split_env("ALLOWED_HOSTS")
+ALLOWED_HOSTS = [
+    "127.0.0.1", "localhost",
+    "18.216.90.98",        # your public IP
+    ".compute-1.amazonaws.com",  # EC2 public DNS
+]
 CSRF_TRUSTED_ORIGINS = _split_env("CSRF_TRUSTED_ORIGINS")
 
 SECRET_KEY = os.environ["SECRET_KEY"]
