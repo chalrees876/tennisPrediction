@@ -199,5 +199,3 @@ def run_pipeline(player=None):
         "df_sigmoid64": df_sigmoid64,
         "db64": db64,
     }
-
-run_pipeline()
