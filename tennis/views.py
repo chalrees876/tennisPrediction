@@ -20,7 +20,7 @@ def home(request):
     return render(request, 'tennis/home.html', context={'form': form})
 
 
-# Create your views here.
+"""# Create your views here.
 def all_players(request):
     try:
         form = MatchForm(request.GET or None)
@@ -70,7 +70,37 @@ def all_players(request):
 
     except Exception:
         logger.exception('all_players failed')
+        return HttpResponseServerError('Something went wrong')"""
+
+# tennis/views.py
+def all_players(request):
+    try:
+        form = MatchForm(request.GET or None)
+        if form.is_valid():
+            return redirect('single_player', pk=form.cleaned_data['player'].pk)
+
+        players = Player.objects.all()
+        tournaments = Tournament.objects.all()
+        matches = Match.objects.all()
+
+        # TEMP: comment pipeline for isolation
+        # pipeline = run_pipeline()
+
+        context = {
+            'players': players,
+            'tournaments': tournaments,
+            'matches': matches,
+            'form': form,
+            # 'cnf_matrix': pipeline['confusion_matrix'],
+            # ...
+        }
+        return render(request, 'tennis/ml_results.html', context=context)
+    except Exception:
+        import traceback, sys
+        print("all_players failed:\n", traceback.format_exc(), file=sys.stderr, flush=True)
+        logger.exception('Something went wrong')
         return HttpResponseServerError('Something went wrong')
+
 
 # Create your views here.
 def single_player(request, pk):
