@@ -1,4 +1,5 @@
 import csv
+import os
 from datetime import datetime
 import re
 
@@ -10,11 +11,12 @@ class Command(BaseCommand):
     help = 'Import matches from csv file'
 
     def handle(self, *args, **options):
-
         skipped = 0
         created = 0
-
-        with open('/Users/chrismckenzie/Downloads/tennisprediction/tennis/data/cleaned_data/matches.csv') as csvfile:
+        current_path = os.path.abspath(__file__)
+        tennis_app_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+        data_path = (tennis_app_path + "/data/cleaned_data/matches.csv")
+        with open(data_path) as csvfile:
             reader = csv.DictReader(csvfile)
             with transaction.atomic():
                 for row in reader:
@@ -65,11 +67,8 @@ class Command(BaseCommand):
                         )
 
                         created += 1
-                        print("created")
                     except Exception as e:
                         skipped += 1
-                        print(e)
-                        print("skipped")
-                        print(row)
+
 
 
