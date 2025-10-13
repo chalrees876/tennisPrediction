@@ -15,14 +15,39 @@
     <div>
         <h2 class="container">Recent Results for {{ player }}</h2>
         <table class="table">
-            <thead>First Serve %</thead>
-            <thead>Double Faults</thead>
-            <thead>Opponent</thead>
-            <thead>Score</thead>
-            <thead>W/L</thead>
             <tr>
-                <th>Matches</th>
+                <th>Opponent</th>
+                <th>Tournament</th>
+                <th>Result</th>
+                <th>First Serve %</th>
+                <th>Double Faults</th>
             </tr>
+            {% for match in p1_matches %}
+            <tr>
+                <td>{{ match.player2 }}</td>
+                <td>{{ match.tournament }}</td>
+                {% if match.winner.name == player %}
+                <td>W</td>
+                {% elif match.loser.name == player %}
+                <td>L</td>
+                {% endif %}
+                <td>{{ match.p1_first_serve_pctg }}</td>
+                <td>{{ match.p1_double_faults }}</td>
+            </tr>
+            {% endfor %}
+            {% for match in p2_matches %}
+            <tr>
+                <td>{{ match.player1 }}</td>
+                <td>{{ match.tournament }}</td>
+                {% if match.winner.name == player %}
+                <td>W</td>
+                {% elif match.loser.name == player %}
+                <td>L</td>
+                {% endif %}
+                <td>{{ match.p2_first_serve_pctg }}</td>
+                <td>{{ match.p2_double_faults }}</td>
+            </tr>
+            {% endfor %}
         </table>
     </div>
 

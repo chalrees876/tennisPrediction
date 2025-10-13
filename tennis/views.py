@@ -81,6 +81,8 @@ def single_player(request, pk):
     matches = Match.objects.all()
     name = None
     name = get_object_or_404(Player, pk=pk).name
+    p1_matches = matches.filter(player1=pk)
+    p2_matches = matches.filter(player2=pk)
     if name:
         pipeline = run_pipeline(name)
     else:
@@ -100,6 +102,8 @@ def single_player(request, pk):
             'db': pipeline['db64'],
             'player': name,
             'form': form,
+            'p1_matches': p1_matches,
+            'p2_matches': p2_matches,
         }
 
         if name:
