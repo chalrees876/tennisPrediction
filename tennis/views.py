@@ -34,7 +34,6 @@ def all_players(request):
         tournaments = Tournament.objects.all()
         matches = Match.objects.all()
 
-        # Try to reuse a cached ML result; recompute at most every 6 hours.
         pipeline = cache.get('ml_dashboard_v1')
         if pipeline is None:
             try:
@@ -109,7 +108,7 @@ def single_player(request, pk):
             return render(request, 'tennis/ml_results.html', context=context)
     else:
         return render(request, 'tennis/error.html', context={'name': name})
-
+    
 def player_search(request):
     query = request.GET.get('search', '').strip()
     if not query:

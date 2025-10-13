@@ -1,3 +1,4 @@
+
 import os
 from .settings_base import *
 import os
@@ -8,9 +9,10 @@ def _split_env(name):
 ALLOWED_HOSTS = [
     "127.0.0.1", "localhost",
     "18.216.90.98",        # your public IP
-    ".compute-1.amazonaws.com",  # EC2 public DNS
+    ".compute-1.amazonaws.com",
+"tennisml.duckdns.org"  # EC2 public DNS
 ]
-CSRF_TRUSTED_ORIGINS = _split_env("CSRF_TRUSTED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = [_split_env("CSRF_TRUSTED_ORIGINS"), "https://tennisml.duckdns.org"]
 
 SECRET_KEY = os.environ["SECRET_KEY"]
 

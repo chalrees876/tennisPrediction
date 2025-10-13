@@ -8,3 +8,4 @@ natsort>=8.4
 psycopg
 pyspark==3.3.2
 pyarrow==12.0.1
+boto3>=1.28

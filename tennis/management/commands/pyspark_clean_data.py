@@ -6,6 +6,7 @@ import subprocess
 import time
 
 import django
+from pyspark.sql.functions import lit
 
 from pyspark.sql.types import StringType, IntegerType, StructField, BooleanType, StructType
 
@@ -96,6 +97,63 @@ schema = StructType([
 csv_files = glob.glob("/Users/chrismckenzie/Downloads/tennisprediction/tennis/data/raw_data/*.csv")
 points_df = spark.read.csv(csv_files, header=True, schema=schema)
 matches = points_df.select('match_id').distinct()
+windowSpec = Window.partitionBy('match_id').orderBy('Pt')
+points_df = points_df.withColumns({
+    'P1gamesrank': lit(0),
+    'P1games': lit(0),
+    'P2games':lit(0),
+    'P1sets':lit(0),
+    'P2sets': lit(0)})
+
+points_df = points_df.withColumn('P1games', F.sum(F.col('P1gamesrank')).over(windowSpec))
+
+points_df = (points_df
+             .withColumn('P1games',
+                F.when(
+                    (F.lead(F.col('Gm1'), 1, 0).over(windowSpec) == 0) &
+                    (F.lag(F.col('Gm1'), 1, 0).over(windowSpec) != 0) &
+                    (F.col('PtWinner') == 1),
+                    F.col('Gm1') + 1
+                    ).otherwise(
+                    F.col('Gm1')
+                    )
+                )
+             .withColumn('P2games',
+                 F.when(
+                     (F.lead(F.col('Gm2'), 1, 0).over(windowSpec) == 0) &
+                     (F.lag(F.col('Gm2'), 1, 0).over(windowSpec) != 0) &
+                     (F.col('PtWinner') == 2),
+                     F.col('Gm2') + 1
+                    ).otherwise(
+                     F.col('Gm2')
+                        )
+                    )
+                )
+
+points_df = points_df.withColumn('tempSet1Score', F.when(
+    ((F.col('Set1') + F.col('Set2')) == 0), F.concat(F.col('P1games').cast("string"), lit("-"), F.col('P2games').cast("string")))
+)
+points_df = points_df.withColumn('tempSet2Score', F.when(
+    ((F.col('Set1') + F.col('Set2')) == 1), F.concat(F.col('P1games').cast("string"), lit("-"), F.col('P2games').cast("string")))
+)
+points_df = points_df.withColumn('tempSet3Score', F.when(
+    ((F.col('Set1') + F.col('Set2')) == 2), F.concat(F.col('P1games').cast("string"), lit("-"), F.col('P2games').cast("string")))
+)
+points_df = points_df.withColumn('tempSet4Score', F.when(
+    ((F.col('Set1') + F.col('Set2')) == 3), F.concat(F.col('P1games').cast("string"), lit("-"), F.col('P2games').cast("string")))
+)
+points_df = points_df.withColumn('tempSet5Score', F.when(
+    ((F.col('Set1') + F.col('Set2')) == 4), F.concat(F.col('P1games').cast("string"), lit("-"), F.col('P2games').cast("string")))
+)
+
+points_df = (points_df.withColumn('Set1Score', F.last(F.col('tempSet1Score'), ignorenulls=True).over(windowSpec))
+             .withColumn('Set2Score', F.last(F.col('tempSet2Score'), ignorenulls=True).over(windowSpec))
+             .withColumn('Set3Score', F.last(F.col('tempSet3Score'), ignorenulls=True).over(windowSpec))
+             .withColumn('Set4Score', F.last(F.col('tempSet4Score'), ignorenulls=True).over(windowSpec))
+             .withColumn('Set5Score', F.last(F.col('tempSet5Score'), ignorenulls=True).over(windowSpec))
+             ).drop('tempSet1Score', 'tempSet2Score', 'tempSet3Score', 'tempSet4Score', 'tempSet5Score')
+
+points_df = (points_df.withColumn('MatchScore', F.concat_ws(" ", F.col('Set1Score'), F.col('Set2Score'), F.col('Set3Score'), F.col('Set4Score'), F.col('Set5Score')))).drop('Set1Score', 'Set2Score', 'Set3Score', 'Set4Score', 'Set5Score', 'P1gamesrank', 'P1games', 'P2games', 'P1sets', 'P2sets')
 
 matches = matches.select(
     'match_id',
@@ -119,6 +177,11 @@ points_df = points_df.withColumns({
 points_df = points_df.withColumn('1st serve fault', points_df['2nd'].isNotNull())
 points_df = points_df.withColumn('2nd serve fault', F.substring(points_df['2nd'], 2, 1).isin(list(error_code.keys()))).fillna(False)
 
+score = points_df.orderBy('match_id', 'Pt').groupBy(
+    'match_id').agg(
+    F.last('MatchScore').alias('match_score')
+)
+
 serve_data = points_df.groupBy(
         'match_id', 'Svr').agg(
         F.round((100 * F.sum((~F.col('1st serve fault')).cast('integer')) / F.count('*'))).alias("first serve percent"),
@@ -140,8 +203,10 @@ match_winner = points_df.withColumn('match_winner', F.row_number().over(window))
 match_winner = match_winner.withColumn('match_winner', F.col('PtWinner'))
 match_winner = match_winner.withColumn('winner', F.when(F.col('match_winner')==1, F.translate(F.split('match_id', '-').getItem(4), '_', ' ')).otherwise(F.translate(F.split('match_id', '-').getItem(5), '_', ' ')))
 match_winner = match_winner.withColumn('loser', F.when(F.col('match_winner')==1, F.translate(F.split('match_id', '-').getItem(5), '_', ' ')).otherwise(F.translate(F.split('match_id', '-').getItem(4), '_', ' ')))
+matches = matches.join(score, on='match_id', how='left')
 matches = matches.join(match_winner.select(['winner', 'loser', 'match_id']), on='match_id', how='left')
 matches = matches.join(serve_data, on='match_id', how='left' )
+
 
 p1 = matches.withColumns({
     'Player': F.col('player_1'),
@@ -163,8 +228,7 @@ p2 = matches.withColumns({
 clean = p1.union(p2)
 
 start_time = time.time()
-matches.where(F.col('gender')=='W').show()
-clean.show(truncate=0)
+matches.orderBy(F.desc('date')).show()
 matches.coalesce(1).write.csv('/Users/chrismckenzie/Downloads/tennisprediction/tennis/data/cleaned_data', header=True, mode='overwrite')
 end_time = time.time()
 print(end_time - start_time)
