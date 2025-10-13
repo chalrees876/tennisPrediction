@@ -2,17 +2,22 @@ import os
 from .settings_base import *
 import os
 
-def _split_env(name):
-    return [x.strip() for x in os.environ.get(name, "").split(",") if x.strip()]
-
 ALLOWED_HOSTS = [
     "127.0.0.1", "localhost",
     "18.216.90.98",        # your public IP
     ".compute-1.amazonaws.com",
 "tennisml.duckdns.org"  # EC2 public DNS
 ]
-CSRF_TRUSTED_ORIGINS = [_split_env("CSRF_TRUSTED_ORIGINS"), "https://tennisml.duckdns.org"]
 
+def _csv(name, default=""):
+    raw = os.getenv(name, default)
+    # Return list, stripping whitespace and dropping empties
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+CSRF_TRUSTED_ORIGINS = [
+    o for o in _csv("DJANGO_CSRF_TRUSTED_ORIGINS")
+    if o.startswith("http://") or o.startswith("https://")
+]
 SECRET_KEY = os.environ["SECRET_KEY"]
 
 DATABASES = {
