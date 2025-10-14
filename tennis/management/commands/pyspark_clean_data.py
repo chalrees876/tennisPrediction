@@ -105,6 +105,132 @@ points_df = points_df.withColumns({
     'P1sets':lit(0),
     'P2sets': lit(0)})
 
+points_df = (points_df.withColumn("p1_fs_point",
+                F.when(
+                    ((F.col('Svr') == 1)  & (F.col('2nd').isNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p2_fs_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('2nd').isNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p1_ss_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('2nd').isNotNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p2_ss_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('2nd').isNotNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p1_fsr_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('2nd').isNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p2_fsr_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('2nd').isNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p1_ssr_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('2nd').isNotNull())),
+                    True
+                    ).otherwise(False)
+                ).withColumn("p2_ssr_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('2nd').isNotNull())),
+                    True
+                    ).otherwise(False)
+                )
+             )
+
+points_df = (points_df.withColumn("p1_fsw_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('PtWinner') == 1) & F.col('2nd').isNull()),
+                True).otherwise(False)
+                ).withColumn("p2_fsw_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('PtWinner') == 2) & F.col('2nd').isNull()),
+                True).otherwise(False)
+                ).withColumn("p1_ssw_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('PtWinner') == 1) & F.col('2nd').isNotNull()),
+                True).otherwise(False)
+                )
+                .withColumn("p2_ssw_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('PtWinner') == 2) & F.col('2nd').isNotNull()),
+                True).otherwise(False)
+                ).withColumn("p1_fsrw_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('PtWinner') == 1) & F.col('2nd').isNull()),
+                    True).otherwise(False)
+                ).withColumn("p2_fsrw_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('PtWinner') == 2) & F.col('2nd').isNull()),
+                    True).otherwise(False)
+                ).withColumn("p1_ssrw_point",
+                F.when(
+                    ((F.col('Svr') == 2) & (F.col('PtWinner') == 1) & F.col('2nd').isNotNull()),
+                    True).otherwise(False)
+                ).withColumn("p2_ssrw_point",
+                F.when(
+                    ((F.col('Svr') == 1) & (F.col('PtWinner') == 2) & F.col('2nd').isNotNull()),
+                    True).otherwise(False)
+                )
+            )
+
+points_df.show()
+
+match_stats_df = points_df.orderBy('Pt').groupby('match_id').agg(
+    (F.sum(
+        F.col('p1_fsw_point').cast('integer')
+    ) /
+    F.sum(F.col('p1_fs_point').cast('integer')
+          )).alias('p1_fswp'),
+    (F.sum(
+        F.col('p2_fsw_point').cast('integer')
+    ) /
+    F.sum(F.col('p2_fs_point').cast('integer')
+          )).alias('p2_fswp'),
+    (F.sum(
+            F.col('p1_ssw_point').cast('integer')
+        ) /
+        F.sum(F.col('p1_ss_point').cast('integer')
+              )).alias('p1_sswp'),
+    (F.sum(
+            F.col('p2_ssw_point').cast('integer')
+        ) /
+        F.sum(F.col('p2_ss_point').cast('integer')
+              )).alias('p2_sswp'),
+    (F.sum(
+            (F.col('p1_fsrw_point')).cast('integer')
+        ) /
+        F.sum(F.col('p1_fsr_point').cast('integer')
+              )).alias('p1_fsrwp'),
+    (F.sum(
+            (F.col('p2_fsrw_point')).cast('integer')
+        ) /
+        F.sum(F.col('p2_fsr_point').cast('integer')
+              )).alias('p2_fsrwp'),
+    (F.sum(
+            (F.col('p1_ssrw_point')).cast('integer')
+        ) /
+        F.sum(F.col('p1_ssr_point').cast('integer')
+              )).alias('p1_ssrwp'),
+    (F.sum(
+            (F.col('p2_ssrw_point')).cast('integer')
+        ) /
+        F.sum(F.col('p2_ssr_point').cast('integer')
+              )).alias('p2_ssrwp'),
+)
+
+match_stats_df.show(truncate=False)
+
 points_df = points_df.withColumn('P1games', F.sum(F.col('P1gamesrank')).over(windowSpec))
 
 points_df = (points_df
@@ -206,6 +332,7 @@ match_winner = match_winner.withColumn('loser', F.when(F.col('match_winner')==1,
 matches = matches.join(score, on='match_id', how='left')
 matches = matches.join(match_winner.select(['winner', 'loser', 'match_id']), on='match_id', how='left')
 matches = matches.join(serve_data, on='match_id', how='left' )
+matches = matches.join(match_stats_df, on='match_id', how='left')
 
 
 p1 = matches.withColumns({
