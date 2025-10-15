@@ -5,14 +5,13 @@ from django import forms
 # Create your models here.
 
 class Player(models.Model):
-    name = models.CharField(max_length=100)
-    ranking = models.IntegerField()
+    name = models.CharField(max_length=100, unique=True)
+    ranking = models.FloatField()
     fsr_p_w_pctg = models.FloatField() # % 1st Serve Return Points Won
     ssr_p_w_pctg = models.FloatField() # % 2nd Serve Return Points Won
     break_p_w_pctg = models.FloatField() # % Break Points Converted
     return_g_w_pctg = models.FloatField() # % Return Games Won
     return_rating = models.FloatField() # Return Rating
-    break_p_w_pctg = models.FloatField() # % Break Points Converted
     break_p_saved_pctg = models.FloatField() # % Break Points Saved
     deciding_s_w_pctg = models.FloatField() # % Deciding Sets Won
     tb_w_pctg = models.FloatField() # % Tie Breaks Won
@@ -21,9 +20,9 @@ class Player(models.Model):
     fs_p_w_pctg = models.FloatField() # % 1st Serve Points Won
     ss_p_w_pctg = models.FloatField()  # % 2nd Serve Points Won
     s_g_w_pctg = models.FloatField() # % Service Games Won
-    a_m = models.FloatField() # Avg. Aces/match
-    df_m = models.FloatField()
-    sr = models.FloatField()
+    a_m = models.FloatField() # Avg. Aces/ Match
+    df_m = models.FloatField() # Avg. Double Faults/Match
+    sr = models.FloatField() # Serve Rating
 
 
 
@@ -44,7 +43,7 @@ class Tournament(models.Model):
         return self.name
 
 class Match(models.Model):
-    match_id = models.CharField(max_length=100, primary_key=True)
+    match_id = models.CharField(max_length=100, primary_key=True, unique=True)
     player1 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player1")
     player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player2")
     winner = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="winner")

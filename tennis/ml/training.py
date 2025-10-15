@@ -1,5 +1,6 @@
 import base64
 import io
+from expiring_lru_cache import lru_cache, DAYS
 from itertools import chain
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.model_selection import train_test_split
@@ -25,8 +26,9 @@ def fig_to_base64(fig):
     buffer.seek(0)
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
+@lru_cache(expires_after=7 * DAYS)
 def run_pipeline(player=None):
-    from tennis.models import Match, Player, Tournament
+    from tennis.models import Match
     p1_qs = (
         Match.objects
         .select_related("player1", "winner")

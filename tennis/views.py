@@ -1,11 +1,13 @@
 import base64
 from pathlib import Path
+import re
 
 from django.core.cache import cache
 from django.http.response import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls.base import reverse
 from django.http import HttpResponseServerError
+from django.db.models import Q
 from .models import Player, Tournament, Match, MatchForm
 from .ml.training import run_pipeline
 import logging
@@ -38,7 +40,7 @@ def all_players(request):
         if pipeline is None:
             try:
                 pipeline = run_pipeline()
-                cache.set('ml_dashboard_v1', pipeline, 6 * 60 * 60)  # 6 hours
+                cache.set('ml_dashboard_v1', pipeline, 168 * 60 * 60)  # 1 week
             except Exception:
                 logger.exception("run_pipeline failed")
                 pipeline = None
@@ -76,27 +78,29 @@ def single_player(request, pk):
     if form.is_valid():
         selected_player = form.cleaned_data['player']
         return redirect('single_player', pk=selected_player.pk)
-    players = Player.objects.all()
-    tournaments = Tournament.objects.all()
-    matches = Match.objects.order_by('-match_id')
-    name = None
     name = get_object_or_404(Player, pk=pk).name
-    player_matches = []
-    for match in matches:
-        if match.player1.name == name:
-            player_matches.append(match)
-        if match.player2.name == name:
-            player_matches.append(match)
-    ten_player_matches = player_matches[:10]
+    player_matches_qs = Match.objects.filter(Q(player1__name=name) | Q(player2__name=name)).select_related('player1', 'player2').order_by('-match_id')
+    ten_player_matches = player_matches_qs[:10]
+
     if name:
-        pipeline = run_pipeline(name)
+        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+        cache_name = f"{safe_name}_ml_dashboard"
     else:
-        pipeline = run_pipeline()
+        cache_name = "ml_dashboard_v1"
+
+    pipeline = cache.get(cache_name)
+
+    if pipeline is None:
+        try:
+            pipeline = run_pipeline(name) if name else run_pipeline()
+            cache.set(cache_name, pipeline, 168 * 60 * 60)  # cache for 1 week
+        except Exception:
+            logger.exception("run_pipeline failed")
+            pipeline = None
+
     if pipeline:
         context = {
-            'players': players,
-            'tournaments': tournaments,
-            'matches': matches,
+            'matches': player_matches_qs,
             'cnf_matrix': pipeline['confusion_matrix'],
             'heatmap': pipeline['heatmap_b64'],
             'cr': pipeline['classification_report'],
