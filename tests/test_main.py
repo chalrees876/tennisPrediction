@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-import src.main as main
+import scraping.main as main
 
 dtypes = {'match_id': "string",
           'Pt': "string",

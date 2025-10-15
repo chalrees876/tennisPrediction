@@ -6,6 +6,26 @@ from django import forms
 
 class Player(models.Model):
     name = models.CharField(max_length=100)
+    ranking = models.IntegerField()
+    fsr_p_w_pctg = models.FloatField() # % 1st Serve Return Points Won
+    ssr_p_w_pctg = models.FloatField() # % 2nd Serve Return Points Won
+    break_p_w_pctg = models.FloatField() # % Break Points Converted
+    return_g_w_pctg = models.FloatField() # % Return Games Won
+    return_rating = models.FloatField() # Return Rating
+    break_p_w_pctg = models.FloatField() # % Break Points Converted
+    break_p_saved_pctg = models.FloatField() # % Break Points Saved
+    deciding_s_w_pctg = models.FloatField() # % Deciding Sets Won
+    tb_w_pctg = models.FloatField() # % Tie Breaks Won
+    under_pressure_rating = models.FloatField() # Under Pressure Rating
+    fsp = models.FloatField() # % 1st serve
+    fs_p_w_pctg = models.FloatField() # % 1st Serve Points Won
+    ss_p_w_pctg = models.FloatField()  # % 2nd Serve Points Won
+    s_g_w_pctg = models.FloatField() # % Service Games Won
+    a_m = models.FloatField() # Avg. Aces/match
+    df_m = models.FloatField()
+    sr = models.FloatField()
+
+
 
     def __str__(self):
         return self.name

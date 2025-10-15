@@ -94,7 +94,7 @@ schema = StructType([
     StructField('PtWinner', IntegerType(), True),
 ])
 
-csv_files = glob.glob("/Users/chrismckenzie/Downloads/tennisprediction/tennis/data/raw_data/*.csv")
+csv_files = glob.glob("./data/raw_data/*.csv")
 points_df = spark.read.csv(csv_files, header=True, schema=schema)
 matches = points_df.select('match_id').distinct()
 windowSpec = Window.partitionBy('match_id').orderBy('Pt')
@@ -356,6 +356,6 @@ clean = p1.union(p2)
 
 start_time = time.time()
 matches.orderBy(F.desc('date')).show()
-matches.coalesce(1).write.csv('/Users/chrismckenzie/Downloads/tennisprediction/tennis/data/cleaned_data', header=True, mode='overwrite')
+matches.coalesce(1).write.csv('./data/cleaned_data', header=True, mode='overwrite')
 end_time = time.time()
 print(end_time - start_time)

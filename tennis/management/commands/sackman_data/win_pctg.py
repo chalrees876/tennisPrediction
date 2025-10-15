@@ -13,7 +13,7 @@ if "JAVA_HOME" not in os.environ or "17" not in os.environ["JAVA_HOME"]:
     ).decode().strip()
 
 current_path = os.path.abspath(__file__)
-tennis_app_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+tennis_app_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_path))))
 data_path = (tennis_app_path + "/data/cleaned_data/matches.csv")
 
 spark = (SparkSession.builder
@@ -47,7 +47,7 @@ schema = StructType([
     StructField('PtWinner', IntegerType(), True),
 ])
 
-csv_files = glob.glob("/Users/chrismckenzie/Downloads/tennisprediction/tennis/data/raw_data/*.csv")
+csv_files = glob.glob("/tennis/management/commands/sackman_data/data/raw_data/*.csv")
 points_df = spark.read.option("multiLine", True).option("quote", '"').option("escape", "'").option("header", True).schema(schema).csv(csv_files)
 
 
