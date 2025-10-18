@@ -10,3 +10,8 @@ to run this program on your machine:
    `python manage.py runserver`
 5. you should now have the django app up and running on your web browser.
 6. You can see machine learning visualizations for all atp players or an individual player of your choosing.
+
+
+TODO
+
+set model fields to match tennisabstract.com

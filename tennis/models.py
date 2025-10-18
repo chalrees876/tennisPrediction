@@ -1,28 +1,14 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.fields.related import ForeignKey
 from django.urls import reverse
 from django import forms
 # Create your models here.
 
 class Player(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    age = models.IntegerField()
     ranking = models.FloatField()
-    fsr_p_w_pctg = models.FloatField() # % 1st Serve Return Points Won
-    ssr_p_w_pctg = models.FloatField() # % 2nd Serve Return Points Won
-    break_p_w_pctg = models.FloatField() # % Break Points Converted
-    return_g_w_pctg = models.FloatField() # % Return Games Won
-    return_rating = models.FloatField() # Return Rating
-    break_p_saved_pctg = models.FloatField() # % Break Points Saved
-    deciding_s_w_pctg = models.FloatField() # % Deciding Sets Won
-    tb_w_pctg = models.FloatField() # % Tie Breaks Won
-    under_pressure_rating = models.FloatField() # Under Pressure Rating
-    fsp = models.FloatField() # % 1st serve
-    fs_p_w_pctg = models.FloatField() # % 1st Serve Points Won
-    ss_p_w_pctg = models.FloatField()  # % 2nd Serve Points Won
-    s_g_w_pctg = models.FloatField() # % Service Games Won
-    a_m = models.FloatField() # Avg. Aces/ Match
-    df_m = models.FloatField() # Avg. Double Faults/Match
-    sr = models.FloatField() # Serve Rating
 
 
 
@@ -31,6 +17,44 @@ class Player(models.Model):
 
     def get_absolute_url(self):
         return reverse("tennis-detail", args=[str(self.id)])
+
+class PlayerElo(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    elo = models.FloatField()
+    elo_ranking = models.FloatField()
+    h_elo = models.FloatField()
+    h_elo_ranking = models.FloatField()
+    c_elo = models.FloatField()
+    c_elo_ranking = models.FloatField()
+    g_elo = models.FloatField()
+    g_elo_ranking = models.FloatField()
+    peak_elo = models.FloatField()
+
+class PlayerPressureStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    break_p_saved_pctg = models.FloatField() # % Break Points Saved
+    deciding_s_w_pctg = models.FloatField() # % Deciding Sets Won
+    tb_w_pctg = models.FloatField() # % Tie Breaks Won
+    under_pressure_rating = models.FloatField() # Under Pressure Rating
+
+class PlayerReturnStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    fsr_p_w_pctg = models.FloatField()  # % 1st Serve Return Points Won
+    ssr_p_w_pctg = models.FloatField()  # % 2nd Serve Return Points Won
+    break_p_w_pctg = models.FloatField()  # % Break Points Converted
+    return_g_w_pctg = models.FloatField()  # % Return Games Won
+    return_rating = models.FloatField()  # Return Rating
+
+class PlayerServeStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    fsp = models.FloatField()  # % 1st serve
+    fs_p_w_pctg = models.FloatField()  # % 1st Serve Points Won
+    ss_p_w_pctg = models.FloatField()  # % 2nd Serve Points Won
+    s_g_w_pctg = models.FloatField()  # % Service Games Won
+    a_m = models.FloatField()  # Avg. Aces/ Match
+    df_m = models.FloatField()  # Avg. Double Faults/Match
+    sr = models.FloatField()  # Serve Rating
+
 
 class Tournament(models.Model):
     name = models.CharField(max_length=100)
@@ -42,21 +66,15 @@ class Tournament(models.Model):
     def __str__(self):
         return self.name
 
+
+# TODO
 class Match(models.Model):
-    match_id = models.CharField(max_length=100, primary_key=True, unique=True)
-    player1 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player1")
-    player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="player2")
-    winner = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="winner")
-    loser = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="loser")
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="matches")
+    player = ForeignKey(Player, on_delete=models.CASCADE)
+    tournament = ForeignKey(Tournament, on_delete=models.CASCADE)
+    surface = models.FloatField()
     round = models.CharField(max_length=50)
+    opponent = models.ForeignKey(Player, on_delete=models.CASCADE)
     score = models.CharField(max_length=50)
-    p1_first_serve_pctg = models.FloatField()
-    p2_first_serve_pctg = models.FloatField()
-    p1_second_serve_pctg = models.FloatField()
-    p2_second_serve_pctg = models.FloatField()
-    p1_double_faults = models.IntegerField()
-    p2_double_faults = models.IntegerField()
 
     def clean(self):
         if self.player1 == self.player2:
