@@ -92,9 +92,9 @@ class PlayerMoreStats(models.Model):
     games = models.IntegerField()
     game_wl = models.CharField(max_length=100)
     game_w_pctg = models.FloatField()
-    time_per_match = models.DateTimeField(max_length=100)
-    min_per_s = models.DateTimeField()
-    sec_per_p = models.DateTimeField()
+    time_per_match = models.CharField(max_length=100)
+    min_per_s = models.FloatField()
+    sec_per_p = models.FloatField()
 
 class Tournament(models.Model):
     name = models.CharField(max_length=100)
@@ -119,7 +119,7 @@ class PlayerMatch(models.Model):
     won = models.BooleanField(default=None)
 
 
-class PlayerMatchStats(models.Model):
+class PlayerMatchServeStats(models.Model):
     match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
     dominance_ratio = models.FloatField()
     ace_pctg = models.FloatField()
@@ -128,7 +128,18 @@ class PlayerMatchStats(models.Model):
     fs_w_pctg = models.FloatField()
     ss_w_pctg = models.FloatField()
     bp_saved = models.CharField(max_length=50)
-    time = models.FloatField()
+    time = models.CharField(max_length=50)
+
+class PlayerMatchReturnStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    dominance_ratio = models.FloatField()
+    total_p_w = models.FloatField()
+    return_p_w = models.FloatField()
+    v_ace_pctg = models.FloatField()
+    v_fs_pctg = models.FloatField()
+    v_ss_pctg = models.FloatField()
+    bp_conv = models.CharField(max_length=50)
+    time = models.CharField(max_length=50)
 
 class PlayerMatchKeyGames(models.Model):
     match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)

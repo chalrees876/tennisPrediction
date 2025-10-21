@@ -1,7 +1,6 @@
 from django.core.management import BaseCommand
 from django.db import transaction
 from django.db.models import Q
-
 from tennis.models import Player  # add other models with FK to Player if you prefer explicit updates
 
 
@@ -10,5 +9,4 @@ def pctg_to_dec(pctg):
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        print(pctg_to_dec("60.0%"))
         return None
