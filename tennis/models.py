@@ -7,54 +7,94 @@ from django import forms
 
 class Player(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    age = models.IntegerField()
-    ranking = models.FloatField()
-
-
-
-    def __str__(self):
-        return self.name
-
-    def get_absolute_url(self):
-        return reverse("tennis-detail", args=[str(self.id)])
+    age = models.IntegerField(null=True, blank=True)
+    ranking = models.IntegerField(null=True, blank=True)
 
 class PlayerElo(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
     elo = models.FloatField()
-    elo_ranking = models.FloatField()
+    elo_ranking = models.IntegerField()
     h_elo = models.FloatField()
-    h_elo_ranking = models.FloatField()
+    h_elo_ranking = models.IntegerField()
     c_elo = models.FloatField()
-    c_elo_ranking = models.FloatField()
+    c_elo_ranking = models.IntegerField()
     g_elo = models.FloatField()
-    g_elo_ranking = models.FloatField()
+    g_elo_ranking = models.IntegerField()
     peak_elo = models.FloatField()
-
-class PlayerPressureStats(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    break_p_saved_pctg = models.FloatField() # % Break Points Saved
-    deciding_s_w_pctg = models.FloatField() # % Deciding Sets Won
-    tb_w_pctg = models.FloatField() # % Tie Breaks Won
-    under_pressure_rating = models.FloatField() # Under Pressure Rating
-
-class PlayerReturnStats(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    fsr_p_w_pctg = models.FloatField()  # % 1st Serve Return Points Won
-    ssr_p_w_pctg = models.FloatField()  # % 2nd Serve Return Points Won
-    break_p_w_pctg = models.FloatField()  # % Break Points Converted
-    return_g_w_pctg = models.FloatField()  # % Return Games Won
-    return_rating = models.FloatField()  # Return Rating
 
 class PlayerServeStats(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    fsp = models.FloatField()  # % 1st serve
-    fs_p_w_pctg = models.FloatField()  # % 1st Serve Points Won
-    ss_p_w_pctg = models.FloatField()  # % 2nd Serve Points Won
-    s_g_w_pctg = models.FloatField()  # % Service Games Won
-    a_m = models.FloatField()  # Avg. Aces/ Match
-    df_m = models.FloatField()  # Avg. Double Faults/Match
-    sr = models.FloatField()  # Serve Rating
+    matches = models.IntegerField()
+    matches_w_pctg = models.FloatField()
+    service_p_w_pctg = models.FloatField()
+    service_p_in_w_pctg = models.FloatField()
+    aces = models.IntegerField()
+    aces_pctg = models.FloatField()
+    dfs = models.IntegerField()
+    df_pctg = models.FloatField()
+    df_per_2nd = models.FloatField()
+    fs_pctg = models.FloatField()
+    fs_w_pctg = models.FloatField()
+    ss_w_pctg = models.FloatField()
+    ss_w_pctg_less_df = models.FloatField()
+    hold_pctg = models.FloatField()
+    pts_per_sg = models.FloatField()
+    pts_l_per_sg = models.FloatField()
 
+class PlayerReturnStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    matches = models.IntegerField()
+    return_p_w_pctg = models.FloatField()
+    return_p_in_w_pctg = models.FloatField()
+    ace_pctg_against = models.FloatField()
+    df_pctg_against = models.FloatField()
+    fs_r_p_w_pctg = models.FloatField()
+    ss_r_p_w_pctg = models.FloatField()
+    break_pctg = models.FloatField()
+    pts_per_rg = models.FloatField()
+    pts_w_per_rg = models.FloatField()
+    med_opp_ranking = models.FloatField()
+    mean_opp_ranking = models.FloatField()
+
+class PlayerBreakStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    matches = models.IntegerField()
+    break_p_conv_pctg = models.FloatField()
+    bp_conv = models.FloatField()
+    bp_chances = models.FloatField()
+    bp_per_g = models.FloatField()
+    bp_per_s = models.FloatField()
+    bp_per_m = models.FloatField()
+    break_per_s = models.FloatField()
+    break_per_m = models.FloatField()
+    bp_saved_pctg = models.FloatField()
+    bp_saved = models.IntegerField()
+    bp_faced = models.IntegerField()
+    bp_faced_per_g = models.FloatField()
+    bp_faced_per_s = models.FloatField()
+    bp_faced_per_m = models.FloatField()
+    sg_l_per_s = models.FloatField()
+    sg_l_per_m = models.FloatField()
+
+class PlayerMoreStats(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    matches = models.IntegerField()
+    dominance_ratio = models.FloatField()
+    points = models.IntegerField()
+    p_w_pctg = models.FloatField()
+    tbs = models.IntegerField()
+    tb_wl = models.CharField(max_length=100)
+    tb_w_pctg = models.FloatField()
+    tb_per_s = models.FloatField()
+    sets = models.IntegerField()
+    set_wl = models.CharField(max_length=100)
+    set_w_pctg = models.FloatField()
+    games = models.IntegerField()
+    game_wl = models.CharField(max_length=100)
+    game_w_pctg = models.FloatField()
+    time_per_match = models.DateTimeField(max_length=100)
+    min_per_s = models.DateTimeField()
+    sec_per_p = models.DateTimeField()
 
 class Tournament(models.Model):
     name = models.CharField(max_length=100)
@@ -66,28 +106,55 @@ class Tournament(models.Model):
     def __str__(self):
         return self.name
 
-
-# TODO
-class Match(models.Model):
-    player = ForeignKey(Player, on_delete=models.CASCADE)
+class PlayerMatch(models.Model):
+    date = models.DateField(default=None)
+    player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player")
     tournament = ForeignKey(Tournament, on_delete=models.CASCADE)
-    surface = models.FloatField()
+    surface = models.CharField(max_length=20, default="Not Specified")
     round = models.CharField(max_length=50)
-    opponent = models.ForeignKey(Player, on_delete=models.CASCADE)
+    rank = models.IntegerField()
+    opponent_rank = models.IntegerField()
+    opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent")
     score = models.CharField(max_length=50)
+    won = models.BooleanField(default=None)
 
-    def clean(self):
-        if self.player1 == self.player2:
-            raise ValidationError("Player 1 and Player 2 must be different")
-        if self.winner not in [self.player1, self.player2]:
-            raise ValidationError("Winner must be player1 or player2")
-        if self.loser not in [self.player1, self.player2]:
-            raise ValidationError("Loser must be player1 or player2")
-        if self.winner == self.loser:
-            raise ValidationError("winner cannot be loser")
 
-    def __str__(self):
-        return f"{self.player1} vs {self.player2}"
+class PlayerMatchStats(models.Model):
+    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
+    dominance_ratio = models.FloatField()
+    ace_pctg = models.FloatField()
+    df_pctg = models.FloatField()
+    fs_pctg = models.FloatField()
+    fs_w_pctg = models.FloatField()
+    ss_w_pctg = models.FloatField()
+    bp_saved = models.CharField(max_length=50)
+    time = models.FloatField()
+
+class PlayerMatchKeyGames(models.Model):
+    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
+    bp_games = models.CharField(max_length=100)
+    bp_conv = models.CharField(max_length=100)
+    break_back = models.CharField(max_length=100)
+    g_with_bp = models.CharField(max_length=100)
+    hold_per_g_with_bp = models.CharField(max_length=100)
+    consolidation_pctg = models.FloatField()
+    serve_for_s = models.CharField(max_length=100)
+    serve_stay_s = models.CharField(max_length=100)
+    serve_for_m = models.CharField(max_length=100)
+    serve_stay_m = models.CharField(max_length=100)
+
+class PlayerPointByPointStats(models.Model):
+    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
+    balanced_leverage_ration = models.FloatField()
+    dominance_ratio_plus = models.FloatField()
+    excitement_index = models.FloatField()
+    comeback_factor = models.FloatField()
+    deuce_ace_pctg = models.FloatField()
+    deuce_s_w_pctg = models.FloatField()
+    ad_ace_pctg = models.FloatField()
+    ad_s_w_pctg = models.FloatField()
+    deuce_r_w_pctg = models.FloatField()
+    ad_r_w_pctg = models.FloatField()
 
 class MatchForm(forms.Form):
     player = forms.ModelChoiceField(
