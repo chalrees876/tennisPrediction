@@ -10,6 +10,9 @@ class Player(models.Model):
     age = models.IntegerField(null=True, blank=True)
     ranking = models.IntegerField(null=True, blank=True)
 
+    def __str__(self):
+        return f"{self.name}"
+
 class PlayerElo(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
     elo = models.FloatField()
@@ -104,7 +107,7 @@ class Tournament(models.Model):
         unique_together = ("name", "year")
 
     def __str__(self):
-        return self.name
+        return f"{self.name}"
 
 class PlayerMatch(models.Model):
     date = models.DateField(default=None)
@@ -117,6 +120,10 @@ class PlayerMatch(models.Model):
     opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent")
     score = models.CharField(max_length=50)
     won = models.BooleanField(default=None)
+    completed = models.BooleanField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.player.name} v {self.opponent.name} - {self.tournament} {self.date}"
 
 
 class PlayerMatchServeStats(models.Model):
@@ -131,7 +138,7 @@ class PlayerMatchServeStats(models.Model):
     time = models.CharField(max_length=50)
 
 class PlayerMatchReturnStats(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
+    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
     dominance_ratio = models.FloatField()
     total_p_w = models.FloatField()
     return_p_w = models.FloatField()

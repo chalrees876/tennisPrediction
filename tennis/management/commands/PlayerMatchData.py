@@ -13,31 +13,40 @@ from tennis.models import Player, PlayerMatch, Tournament, PlayerMatchServeStats
 
 
 class Command(BaseCommand):
-    help = "Import players recent matches"
+    """
+    Splits stats into 3 django models.
+    PlayerMatches (holds basic match data like who where and when),
+    PlayerMatchServeStats (holds service stats for specified player),
+    and PlayerMatchReturnStats (holds return stats for specified player).
+    """
+    help = "Imports players recent matches along with serve stats and return stats for those matches."
 
     def handle(self, *args, **options):
 
-        players = Player.objects.filter(ranking__lte=50).filter(ranking__gt=0)
+        players = Player.objects.filter(ranking__range=[201,500])
         self.stdout.write(f"Found {len(players)} players")
+        player_count = 0
         for player in players:
             try:
                 self.stdout.write(f"Importing recent matches for {player.name}")
                 self.stdout.write(f"Ranking: {player.ranking}")
-                recent_results = self.get_recent_results(player)
-                for row in recent_results:
-                    if row['Score'] == 'Live Scores':
-                        continue
+                results = self.get_results(player)
+                for row in results:
+                    if row['Score'] == 'Live Scores' or not row['Score'].strip():
+                        row['Completed'] = False
+                    else:
+                        row['Completed'] = True
                     with transaction.atomic():
                         try:
                             tournament, tournament_created = Tournament.objects.get_or_create(name=row['Tournament'], year=row['Date'][-4:])
-                            tournament_action = 'created' if tournament_created else 'update'
+                            tournament_action = 'created' if tournament_created else 'got'
 
                             self.stdout.write(
                                 self.style.SUCCESS(f'{tournament_action} {tournament.name}')
                             )
 
                             opponent, opponent_created = Player.objects.get_or_create(name=row['Opponent'])
-                            opponent_action = 'created' if opponent_created else 'update'
+                            opponent_action = 'created' if opponent_created else 'got'
 
                             self.stdout.write(
                                 self.style.SUCCESS(f'{opponent_action} {opponent.name}')
@@ -76,6 +85,7 @@ class Command(BaseCommand):
                                 self.style.SUCCESS(
                                     f'{return_stats_action} return stats for {match.player.name} v {match.opponent.name} at {match.tournament.name}')
                             )
+                            player_count += 1
                         except Exception as e:
                             self.stdout.write(
                                 self.style.ERROR(f'Error {e}')
@@ -83,7 +93,25 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write
 
-    def get_recent_results(self, player):
+        self.stdout.write(
+            self.style.SUCCESS(f'Finished {player_count} player(s)')
+        )
+
+    def get_results(self, player):
+        try:
+            serve_results = self.get_recent_serve_results(player)
+            return_results = self.get_recent_return_results(player)
+
+            results = [{**d1, **d2} for d1, d2 in zip(serve_results, return_results)]
+            pprint(results)
+
+            return results
+        except Exception as e:
+            print(f"{e}")
+            return []
+
+    @staticmethod
+    def get_recent_serve_results(player):
         # Set up Chrome options
         chrome_options = Options()
         chrome_options.add_argument("--headless")  # Run in background
@@ -128,7 +156,7 @@ class Command(BaseCommand):
                         # Get full text to determine who won
                         full_text = cell.text
 
-                        # Check if current player is the winner (appears before "d." in the text)
+                        # Check if current player is the winner (opponent appears after "d." in the text)
                         if full_text.find(opponent) < full_text.find(" d. "):
                             # Current player is the winner
                             won = False
@@ -149,7 +177,8 @@ class Command(BaseCommand):
 
         return total_data
 
-    def get_recent_return_results(self, player):
+    @staticmethod
+    def get_recent_return_results(player):
         # Set up Chrome options
         chrome_options = Options()
         chrome_options.add_argument("--headless")  # Run in background
@@ -170,15 +199,7 @@ class Command(BaseCommand):
             table = driver.find_element(By.ID, "matches")
 
             header_data = table.find_elements(By.TAG_NAME, "th")
-            headers = []
-
-            for header in header_data:
-                print(header.text)
-                if not header.text.strip():
-                    headers.append("Opponent")
-                else:
-                    headers.append(header.text.strip())
-
+            headers = [header.text.strip() for header in header_data]
             rows = table.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
             total_data = []
             for row in rows:
@@ -199,11 +220,13 @@ class Command(BaseCommand):
     def pctg_to_dec(self, pctg):
         return float(pctg.replace("%", "")) / 100
 
-    def player_match_defaults(self, row, opponent):
+    @staticmethod
+    def player_match_defaults(row, opponent):
         date_str = row['Date']
         clean_date = re.sub(r"[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]", "-", date_str.strip())
         parsed_date = datetime.strptime(clean_date, "%d-%b-%Y").date()
         return {
+            'completed': row['Completed'],
             'date': parsed_date,
             'surface': row['Surface'],
             'round': row['Rd'],
@@ -214,7 +237,8 @@ class Command(BaseCommand):
             'won': row['Won']
         }
 
-    def serve_stats_defaults(self, row):
+    @staticmethod
+    def serve_stats_defaults(row):
         return {
             'dominance_ratio': row['DR'],
             'ace_pctg': pctg_to_dec(row['A%']),
@@ -226,7 +250,8 @@ class Command(BaseCommand):
             'time': row['Time']
         }
 
-    def return_stats_defaults(self, row):
+    @staticmethod
+    def return_stats_defaults(row):
         return {
             'dominance_ratio': row['DR'],
             'total_p_w': pctg_to_dec(row['TPW']),
