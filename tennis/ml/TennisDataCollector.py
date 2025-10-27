@@ -55,4 +55,5 @@ class TennisDataCollector:
         pd.reset_option('display.width')
         pd.reset_option('display.float_format')
         pd.reset_option('display.max_colwidth')
-        return pd.DataFrame(training_data)
+        df = pd.DataFrame(training_data)
+        df.to_csv("tennis/data/training_data.csv", index=False)

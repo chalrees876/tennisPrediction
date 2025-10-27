@@ -65,14 +65,14 @@ class TennisFeatureEngineer:
                 else:
                     features[f'win_rate_{surface.lower()}_adjusted'] = 0.5
             if features["avg_opp_rank"]:
-                features["dominance_ratio_adjusted"] = features["dominance_ratio"] + self.DEFAULT_BIAS_TERM - (
-                            features["avg_opp_rank"] * self.DEFAULT_ADJUSTMENT_FACTOR)
-                features["return_rating_adjusted"] = features["return_rating"] + self.DEFAULT_BIAS_TERM - (
-                            features["avg_opp_rank"] * self.DEFAULT_ADJUSTMENT_FACTOR)
-                features["serve_rating_adjusted"] = features["serve_rating"] + self.DEFAULT_BIAS_TERM - (
-                            features["avg_opp_rank"] * self.DEFAULT_ADJUSTMENT_FACTOR)
-                features['win_rate_adjusted'] = win_rate + self.DEFAULT_BIAS_TERM - features[
-                    'avg_opp_rank'] * self.DEFAULT_ADJUSTMENT_FACTOR
+                opp_strength = 1/features["avg_opp_rank"]
+                features["dominance_ratio_adjusted"] = features["dominance_ratio"] + self.DEFAULT_BIAS_TERM + (
+                            opp_strength * self.DEFAULT_ADJUSTMENT_FACTOR)
+                features["return_rating_adjusted"] = features["return_rating"] + self.DEFAULT_BIAS_TERM + (
+                            opp_strength * self.DEFAULT_ADJUSTMENT_FACTOR)
+                features["serve_rating_adjusted"] = features["serve_rating"] + self.DEFAULT_BIAS_TERM + (
+                            opp_strength * self.DEFAULT_ADJUSTMENT_FACTOR)
+                features['win_rate_adjusted'] = win_rate + self.DEFAULT_BIAS_TERM + opp_strength * self.DEFAULT_ADJUSTMENT_FACTOR
             else:
                 features["dominance_ratio_adjusted"] = features["dominance_ratio"]
                 features["return_rating_adjusted"] = features["return_rating"]
@@ -88,9 +88,7 @@ class TennisFeatureEngineer:
         try:
             player1 = match.player
             player2 = match.opponent
-            print(f"creating player features: {player1}")
             player1_features = self.create_player_features(player1, match.date)
-            print(f"creating player features: {player2}")
             player2_features = self.create_player_features(player2, match.date)
 
             match_features = {}
@@ -107,7 +105,6 @@ class TennisFeatureEngineer:
             match_features[f'win_rate_{match.surface.lower()}'] = player1_features[f'win_rate_{match.surface.lower()}'] - player2_features[f'win_rate_{match.surface.lower()}']
             match_features[f'win_rate_{match.surface.lower()}_adjusted'] = player1_features[f'win_rate_{match.surface.lower()}_adjusted'] - player2_features[f'win_rate_{match.surface.lower()}_adjusted']
             self.features.append(match_features)
-            pprint(match_features)
             return match_features
         except Exception as e:
             print(f'Error creating match features: {e}')
@@ -123,7 +120,6 @@ class TennisFeatureEngineer:
             Avg('ss_w_pctg'),
             Avg('ace_pctg')
         )
-        print(f"serve stats {stats}")
         return (
             stats['fs_w_pctg__avg'] or 0,
             stats['fs_pctg__avg'] or 0,
@@ -141,7 +137,6 @@ class TennisFeatureEngineer:
             avg_v_ace_pctg=Avg('v_ace_pctg'),
             avg_v_ss_pctg=Avg('v_ss_pctg'),
         )
-        print(f"return stats: {stats}")
         return (
             stats['avg_v_fs_pctg'] or 0,
             stats['avg_v_ace_pctg'] or 0,
