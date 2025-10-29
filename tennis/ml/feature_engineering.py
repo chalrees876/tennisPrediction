@@ -1,19 +1,20 @@
+from datetime import timedelta
 from pprint import pprint
 from pyexpat import features
 
 from django.db.models import Sum, Avg
 
-from tennis.models import Player, PlayerElo, PlayerMatch, PlayerMatchServeStats, PlayerMatchReturnStats
+from tennis.models import Player, PlayerElo, PlayerMatch, PlayerMatchServeStats, PlayerMatchReturnStats, \
+    PlayerPointByPointStats
 
 
 class TennisFeatureEngineer:
     DEFAULT_ADJUSTMENT_FACTOR = 0.0025
     DEFAULT_BIAS_TERM = 0.2
-    DEFAULT_RECENT_MATCH = 10
     def __init__(self):
         self.features=[]
 
-    def create_player_features(self, player, date, num_matches=DEFAULT_RECENT_MATCH):
+    def create_player_features(self, player, date):
         try:
             player_elo_obj = PlayerElo.objects.get(player=player)
             player_elo = player_elo_obj.elo
@@ -21,23 +22,62 @@ class TennisFeatureEngineer:
             print(e)
             player_elo = 1000
         try:
-            recent_matches = PlayerMatch.objects.filter(player=player, date__lte=date, completed=True).order_by('-date')[:num_matches]
             features = {}
+            recent_matches = PlayerMatch.objects.filter(player=player, date__lte=date, date__gte=(date-timedelta(days=45)), completed=True).order_by('-date')
+            if not recent_matches:
+                features['avg_opp_rank'] = 100
+                features['serve_rating'] = 0.5
+                features['serve_rating_adjusted'] = 0.5
+                features['return_rating'] = 0.5
+                features['return_rating_adjusted'] = 0.5
+                features['dominance_ratio'] = 0.5
+                features['dominance_ratio_adjusted'] = 0.5
+
+            elif len(recent_matches) >= 5:
+                features['fatigue_factor'] = 0.1
+            elif 5 < len(recent_matches) < 8:
+                features['fatigue_factor'] = 0.3
+            elif 8 < len(recent_matches) < 12:
+                features['fatigue_factor'] = 0.6
+            elif 12 < len(recent_matches) < 16:
+                features['fatigue_factor'] = 0.8
+            elif 16 < len(recent_matches):
+                features['fatigue_factor'] = 1.0
+
+            features["avg_opp_rank"] = recent_matches.aggregate(Avg('opponent_rank'))['opponent_rank__avg']
 
             fs_w_pctg, fs_pctg, df_pctg, ss_w_pctg, ace_pctg = self.aggregate_serve_stats(recent_matches)
             v_fs_pctg, v_ace_pctg, v_ss_pctg = self.aggregate_return_stats(recent_matches)
-            features["avg_opp_rank"] = recent_matches.aggregate(Avg('opponent_rank'))['opponent_rank__avg']
+
             features["serve_rating"] = (
-                    (fs_w_pctg * 0.4) +
-                    (ss_w_pctg * 0.3) +
-                    (fs_pctg * 0.2) -
+                    (fs_w_pctg * 0.5) +
+                    (ss_w_pctg * 0.5) +
+                    (fs_pctg * 0.5) -
                     (df_pctg * 0.1)
             )
             features["return_rating"] = (
-            (v_fs_pctg*0.6) +
-            (v_ss_pctg*0.4) -
+            (v_fs_pctg*0.5) +
+            (v_ss_pctg*0.7) -
             (v_ace_pctg*0.1)
             )
+
+            (
+                avg_balanced_leverage_ratio,avg_dominance_ratio_plus,avg_excitement_index,
+                avg_comeback_factor, avg_deuce_ace_pctg, avg_deuce_s_w_pctg,
+                avg_ad_ace_pctg, avg_ad_s_w_pctg, avg_deuce_r_w_pctg, avg_ad_r_w_pctg
+             ) = self.aggregate_point_by_point_stats(recent_matches)
+
+            features["avg_balanced_leverage_ratio"] = avg_balanced_leverage_ratio
+            features["avg_dominance_ratio_plus"] = avg_dominance_ratio_plus
+            features["avg_excitement_index"] = avg_excitement_index
+            features["avg_comeback_factor"] = avg_comeback_factor
+            features["avg_deuce_ace_pctg"] = avg_deuce_ace_pctg
+            features["avg_deuce_s_w_pctg"] = avg_deuce_s_w_pctg
+            features["avg_ad_ace_pctg"] = avg_ad_ace_pctg
+            features["avg_ad_s_w_pctg"] = avg_ad_s_w_pctg
+            features["avg_deuce_r_w_pctg"] = avg_deuce_r_w_pctg
+            features["avg_ad_r_w_pctg"] = avg_ad_r_w_pctg
+
             features["dominance_ratio"] = PlayerMatchServeStats.objects.filter(match__in=recent_matches).aggregate(Avg('dominance_ratio'))['dominance_ratio__avg']
             if features["dominance_ratio"]:
                 features["dominance_ratio_adjusted"] = features["dominance_ratio"] + 0.2 - (features["avg_opp_rank"]*self.DEFAULT_ADJUSTMENT_FACTOR)
@@ -52,7 +92,7 @@ class TennisFeatureEngineer:
             features['current_elo'] = player_elo
             features['win_rate'] = win_rate
             for surface in ['Hard', 'Grass', 'Clay']:
-                surface_matches = PlayerMatch.objects.filter(player=player, surface=surface, date__lte=date).order_by('-date')[:num_matches]
+                surface_matches = PlayerMatch.objects.filter(player=player, surface=surface, date__lte=date, date__gte=(date-timedelta(days=45))).order_by('-date')
                 if surface_matches:
                     features[f'win_rate_{surface.lower()}'] = (sum(1 for w in surface_matches if w.won) / len(
                         surface_matches))
@@ -93,6 +133,7 @@ class TennisFeatureEngineer:
 
             match_features = {}
 
+            match_features['rank_diff'] = match.opponent_rank - match.rank
             match_features['elo_difference'] = player1_features['current_elo'] - player2_features['current_elo']
             match_features['win_rate'] = player1_features['win_rate'] - player2_features['win_rate']
             match_features['win_rate_adjusted'] = player1_features['win_rate_adjusted'] - player2_features['win_rate_adjusted']
@@ -104,6 +145,21 @@ class TennisFeatureEngineer:
             match_features['serve_rating_adjusted'] = player1_features['serve_rating_adjusted'] - player2_features['serve_rating_adjusted']
             match_features[f'win_rate_{match.surface.lower()}'] = player1_features[f'win_rate_{match.surface.lower()}'] - player2_features[f'win_rate_{match.surface.lower()}']
             match_features[f'win_rate_{match.surface.lower()}_adjusted'] = player1_features[f'win_rate_{match.surface.lower()}_adjusted'] - player2_features[f'win_rate_{match.surface.lower()}_adjusted']
+            """
+            
+            add in these once they are added to the player match data
+            
+            match_features["avg_balanced_leverage_ratio"] = player1_features["avg_balanced_leverage_ratio"] - player2_features["avg_balanced_leverage_ratio"]
+            match_features["avg_dominance_ratio_plus"] = player1_features["avg_dominance_ratio_plus"] - player2_features["avg_dominance_ratio_plus"]
+            match_features["avg_excitement_index"] = player1_features["avg_excitement_index"] - player2_features["avg_excitement_index"]
+            match_features["avg_comeback_factor"] = player1_features["avg_comeback_factor"] - player2_features["avg_comeback_factor"]
+            match_features["avg_deuce_ace_pctg"] = player1_features["avg_deuce_ace_pctg"] - player2_features["avg_deuce_ace_pctg"]
+            match_features["avg_deuce_s_w_pctg"] = player1_features["avg_deuce_ace_pctg"] - player2_features["avg_deuce_s_w_pctg"]
+            match_features["avg_ad_ace_pctg"] = player1_features["avg_ad_ace_pctg"] - player2_features["avg_ad_ace_pctg"]
+            match_features["avg_ad_s_w_pctg"] = player1_features["avg_ad_s_w_pctg"] - player2_features["avg_ad_s_w_pctg"]
+            match_features["avg_deuce_r_w_pctg"] = player1_features["avg_deuce_r_w_pctg"] - player2_features["avg_deuce_r_w_pctg"]
+            match_features["avg_ad_r_w_pctg"] = player1_features["avg_ad_r_w_pctg"] - player2_features["avg_ad_r_w_pctg"]
+            """
             self.features.append(match_features)
             return match_features
         except Exception as e:
@@ -111,6 +167,7 @@ class TennisFeatureEngineer:
 
     @staticmethod
     def aggregate_serve_stats(recent_matches):
+
         stats = PlayerMatchServeStats.objects.filter(
             match__in=recent_matches
         ).aggregate(
@@ -118,7 +175,7 @@ class TennisFeatureEngineer:
             Avg('fs_pctg'),
             Avg('df_pctg'),
             Avg('ss_w_pctg'),
-            Avg('ace_pctg')
+            Avg('ace_pctg'),
         )
         return (
             stats['fs_w_pctg__avg'] or 0,
@@ -141,4 +198,34 @@ class TennisFeatureEngineer:
             stats['avg_v_fs_pctg'] or 0,
             stats['avg_v_ace_pctg'] or 0,
             stats['avg_v_ss_pctg'] or 0
+        )
+
+    @staticmethod
+    def aggregate_point_by_point_stats(recent_matches):
+        stats = PlayerPointByPointStats.objects.filter(
+            match__in=recent_matches
+        ).aggregate(
+            avg_balanced_leverage_ration=Avg('balanced_leverage_ration'),
+            avg_dominance_ratio_plus=Avg('dominance_ratio_plus'),
+            avg_excitement_index=Avg('excitement_index'),
+            avg_comeback_factor=Avg('comeback_factor'),
+            avg_deuce_ace_pctg=Avg('deuce_ace_pctg'),
+            avg_deuce_s_w_pctg=Avg('deuce_s_w_pctg'),
+            avg_ad_ace_pctg=Avg('ad_ace_pctg'),
+            avg_ad_s_w_pctg=Avg('ad_s_w_pctg'),
+            avg_deuce_r_w_pctg=Avg('deuce_r_w_pctg'),
+            avg_ad_r_w_pctg=Avg('ad_r_w_pctg'),
+        )
+
+        return (
+            stats['avg_balanced_leverage_ration'] or 0,
+            stats['avg_dominance_ratio_plus'] or 0,
+            stats['avg_excitement_index'] or 0,
+            stats['avg_comeback_factor'] or 0,
+            stats['avg_deuce_ace_pctg'] or 0,
+            stats['avg_deuce_s_w_pctg'] or 0,
+            stats['avg_ad_ace_pctg'] or 0,
+            stats['avg_ad_s_w_pctg'] or 0,
+            stats['avg_deuce_r_w_pctg'] or 0,
+            stats['avg_ad_r_w_pctg'] or 0,
         )

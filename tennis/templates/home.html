@@ -1,28 +1,29 @@
-{% include 'header.html' %}
+{% extends 'base.html' %}
+
+{% block title %}Home - Tennis Predictions{% endblock %}
+
+{% block content %}
 
 <div class="container">
-    Player: {{ player.name }} Age:{{ player.age }} Ranking: {{ player.ranking }}
-</div>
-<div class="container">
-    Elo: {{elo}}
-</div>
-
-<div class="container">
-    upcoming matches:
+    <h1>upcoming matches:</h1>
     <table class="table">
         <thead>
             <tr>
                 <th>Match</th>
+                <th>Odds</th>
             </tr>
         </thead>
         <tbody>
-            {% for match in upcoming_matches %}
+            {% for r in match_odds_list %}
                 <tr>
-                    <td><a href ="{% url 'tennis:match_features' match.id %}">{{ match }}</a></td>
+
+                    <td>{{ r.match }}</td>
+                    <td>{{ r.odds }}</td>
+                    </a>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-{% include 'footer.html' %}
+{% endblock %}

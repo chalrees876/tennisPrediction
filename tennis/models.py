@@ -134,7 +134,8 @@ class PlayerMatchServeStats(models.Model):
     fs_pctg = models.FloatField()
     fs_w_pctg = models.FloatField()
     ss_w_pctg = models.FloatField()
-    bp_saved = models.CharField(max_length=50)
+    bp_saved = models.IntegerField()
+    bp_faced = models.IntegerField()
     time = models.CharField(max_length=50)
 
 class PlayerMatchReturnStats(models.Model):
@@ -145,7 +146,8 @@ class PlayerMatchReturnStats(models.Model):
     v_ace_pctg = models.FloatField()
     v_fs_pctg = models.FloatField()
     v_ss_pctg = models.FloatField()
-    bp_conv = models.CharField(max_length=50)
+    bp_conv = models.IntegerField()
+    bp_chances = models.IntegerField()
     time = models.CharField(max_length=50)
 
 class PlayerMatchKeyGames(models.Model):
