@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Match: {{ match.player.name }} vs {{ match.opponent.name }}{% endblock %}
+{% block content %}
+
+<h1 class="h4 fw-semibold mb-3">{{ match.player.name }} <span class="text-muted">vs</span> {{ match.opponent.name }}</h1>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <p class="mb-1"><strong>Date:</strong> {{ match.date|date:"M d, Y" }}</p>
+    <p class="mb-1"><strong>Tournament:</strong> {{ match.tournament.name }}</p>
+    <p class="mb-1"><strong>Surface:</strong> {{ match.surface }}</p>
+    {% if match.completed %}
+      {% if match.won %}
+        <p class="mb-0"><strong>Winner:</strong> <a class="link-dark fw-semibold" href="{% url 'tennis:player_page' match.player.id %}">{{ match.player.name }}</a></p>
+      {% else %}
+        <p class="mb-0"><strong>Winner:</strong> <a class="link-dark fw-semibold" href="{% url 'tennis:player_page' match.opponent.id %}">{{ match.opponent.name }}</a></p>
+      {% endif %}
+    {% else %}
+      <div class="alert alert-info mb-0">This match is upcoming.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex gap-3 mb-4">
+  <a href="{% url 'tennis:player_page' match.player.id %}" class="btn btn-outline-primary btn-sm">View {{ match.player.name }}</a>
+  <a href="{% url 'tennis:player_page' match.opponent.id %}" class="btn btn-outline-primary btn-sm">View {{ match.opponent.name }}</a>
+  <a href="{% url 'tennis:home' %}" class="btn btn-secondary btn-sm ms-auto">Back to Home</a>
+</div>
+
+{% endblock %}

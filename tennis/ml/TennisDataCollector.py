@@ -14,7 +14,7 @@ class TennisDataCollector:
     def __init__(self, start_date, end_date):
         self.start_date = start_date
         self.end_date = end_date
-        self.feature_engineer = TennisFeatureEngineer()
+        self.feature_engineer = TennisFeatureEngineer(window_days=60)
 
     def collect_training_data(self):
         """Collect matches with features and outcomes for training"""
@@ -28,7 +28,7 @@ class TennisDataCollector:
         for match in matches:
             try:
                 # Create features for this match
-                match_features = self.feature_engineer.create_match_features(match)
+                match_features = self.feature_engineer.create_match_features(match, include_adjusted=False)
 
                 if match_features:
                     # Add target variable (1 if player1 won, 0 if lost)

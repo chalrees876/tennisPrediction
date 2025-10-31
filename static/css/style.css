@@ -1,0 +1,15 @@
+/* Typography helpers */
+.mono { font-variant-numeric: tabular-nums; }
+
+/* HTMX indicator starts hidden; htmx toggles .htmx-request automatically */
+#loading-indicator { display: none; }
+.htmx-request #loading-indicator { display: flex; align-items: center; }
+
+/* Subtle card shadow */
+.card { border-radius: .75rem; }
+
+/* Table spacing */
+table.table td, table.table th { vertical-align: middle; }
+
+/* Navbar active link */
+.navbar .nav-link.active { color: #0d6efd; }

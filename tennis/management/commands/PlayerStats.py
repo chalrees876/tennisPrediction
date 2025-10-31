@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from tennis.management.commands.TempScripts import pctg_to_dec
+from tennis.management.commands.UpcomingMatches import pctg_to_dec
 from tennis.models import Player, PlayerMatch, Tournament, PlayerServeStats, PlayerReturnStats, PlayerBreakStats, \
     PlayerMoreStats
 
