@@ -8,9 +8,10 @@ class Command(BaseCommand):
         commands = [
             "EloImport",
             "PlayerStats",
-            "PlaywrightPlayerMatchData",
+            "PlayerMatchData",
             "TrainModel",
-            "UpcomingMatches"]
+            "UpcomingMatches"
+            ]
         start_time = datetime.datetime.now()
         for command in commands:
             call_command(command)

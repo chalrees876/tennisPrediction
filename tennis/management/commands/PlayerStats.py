@@ -27,10 +27,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
 
-        #self.update_stats("Serve")
-        #self.update_stats("Breaks")
+        self.update_stats("Serve")
+        self.update_stats("Breaks")
         self.update_stats("More")
-        #self.update_stats("Return")
+        self.update_stats("Return")
 
 
     def update_stats(self, type):

@@ -13,8 +13,8 @@
             <th class="ps-4">Match</th>
               <th class="text-center ps-4">MoneyLine (Logistic Regression)</th>
               <th class="text-center ps-4">MoneyLine (Random Forest)</th>
-              <th class="text-center ps-4">MoneyLine (Ensemble)</th>
-              <th class="text-end ps-4">Match Insights</th>
+              <th class="text-center ps-4">MoneyLine</th>
+              <th class="text-end ps-4">H2H</th>
           </tr>
         </thead>
         <tbody>
@@ -27,7 +27,7 @@
                 </a>
                 <span class="text-muted">vs</span>
                 <a class="link-dark link-underline-opacity-0 link-underline-opacity-100-hover fw-semibold"
-                   href="{% url 'tennis:h2h_page' m.match.id %}">
+                   href="{% url 'tennis:player_page' m.match.opponent.id %}">
                   {{ m.match.opponent }}
                 </a>
               </td>
@@ -58,8 +58,8 @@
 
               <td class="text-end ps-4">
                 <a class="link-dark link-underline-opacity-0 link-underline-opacity-100-hover fw-semibold"
-                   href="{% url 'tennis:match_page' m.match.id %}">
-                  more
+                   href="{% url 'tennis:h_to_h_page' m.match.id %}">
+                  Here
                 </a>
               </td>
             </tr>

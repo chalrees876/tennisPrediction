@@ -4,9 +4,8 @@ from pprint import pprint
 
 from django.core.management import BaseCommand
 from django.db import transaction
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
+from django.db.models import Q
+from playwright.sync_api import sync_playwright
 
 from tennis.models import Player, PlayerMatch, Tournament, PlayerMatchServeStats, PlayerMatchReturnStats
 
@@ -19,24 +18,22 @@ class Command(BaseCommand):
     PlayerMatchServeStats (holds service stats for specified player),
     and PlayerMatchReturnStats (holds return stats for specified player).
     """
-    help = "Imports players recent matches along with serve stats and return stats for those matches."
 
     def handle(self, *args, **options):
-        players = Player.objects.filter(ranking__range=[7])
-        self.stdout.write(f"Found {len(players)} players")
+        try:
+            players = Player.objects.filter(Q(name="Ben Shelton") | Q(name="Jannik Sinner"))
+        except Player.DoesNotExist:
+            self.stdout.write("Player 'Ben Shelton' not found.")
         player_count = 0
         for player in players:
             try:
                 self.stdout.write(f"Importing recent matches for {player.name}")
                 self.stdout.write(f"Ranking: {player.ranking}")
-                recent_results = self.get_recent_results(player)
-                for row in recent_results:
-                    if row['Score'] == 'Live Scores':
-                        continue
                 results = self.get_results(player)
                 for row in results:
                     if row['Score'] == 'Live Scores' or not row['Score'].strip():
                         row['Completed'] = False
+                        row['Won'] = None
                     else:
                         row['Completed'] = True
                     with transaction.atomic():
@@ -60,7 +57,7 @@ class Command(BaseCommand):
                             match, match_created = PlayerMatch.objects.update_or_create(
                                 player=player,
                                 opponent=opponent,
-                                tournament = tournament,
+                                tournament=tournament,
                                 defaults=self.player_match_defaults(row, opponent))
 
                             match_action = 'created' if match_created else 'update'
@@ -88,7 +85,7 @@ class Command(BaseCommand):
 
                             self.stdout.write(
                                 self.style.SUCCESS(
-                                    f'{return_stats_action} return stats for {match.player.name} v {match.opponent.name} at {match.tournament.name}')
+                                    f'created {match}')
                             )
                             player_count += 1
                         except Exception as e:
@@ -96,12 +93,7 @@ class Command(BaseCommand):
                                 self.style.ERROR(f'Error {e}')
                             )
             except Exception as e:
-                self.stdout.write
-
-    def get_recent_results(self, player):
-        self.stdout.write(
-            self.style.SUCCESS(f'Finished {player_count} player(s)')
-        )
+                self.stdout.write(self.style.ERROR(f'Error processing player {player.name}: {e}'))
 
     def get_results(self, player):
         try:
@@ -109,137 +101,142 @@ class Command(BaseCommand):
             return_results = self.get_recent_return_results(player)
 
             results = [{**d1, **d2} for d1, d2 in zip(serve_results, return_results)]
-            pprint(results)
-
             return results
         except Exception as e:
             print(f"{e}")
             return []
 
-    @staticmethod
-    def get_recent_serve_results(player):
-        # Set up Chrome options
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Block images for faster loading
-        chrome_options.add_experimental_option("prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Disable images
-        })
+    def get_recent_serve_results(self, player):
+        url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}"
 
-        # Initialize driver
-        driver = webdriver.Chrome(options=chrome_options)
-        try:
-            driver.get(f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}")
+        def parse_serve_page(page):
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_selector("#matches", timeout=10000)
 
-            table = driver.find_element(By.ID, "matches")
+                table = page.query_selector("#matches")
 
-            header_data = table.find_elements(By.TAG_NAME, "th")
-            headers = []
+                header_elements = table.query_selector_all("th")
+                headers = []
 
-            for header in header_data:
-                if not header.text.strip():
-                    headers.append("Opponent")
-                else:
-                    headers.append(header.text.strip())
-            headers.append("Won")
-
-            rows = table.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
-            total_data = []
-            for row in rows:
-                cell_data = row.find_elements(By.TAG_NAME, "td")
-                cell_text = []
-                for i, cell in enumerate(cell_data):
-                    if i == 6:
-
-                        # The opponent is in <a> tag
-                        opponent_link = cell.find_element(By.TAG_NAME, "a")
-                        opponent = opponent_link.text.strip()
-
-                        # Get full text to determine who won
-                        full_text = cell.text
-
-                        # Check if current player is the winner (appears before "d." in the text)
-                        # Check if current player is the winner (opponent appears after "d." in the text)
-                        if full_text.find(opponent) < full_text.find(" d. "):
-                            # Current player is the winner
-                            won = False
-                        else:
-                            won = True
-                        cell_text.append(opponent)
-                    elif i == 16:
-                        cell_text.append(cell.text)
-                        cell_text.append(won)
+                for header in header_elements:
+                    text = header.inner_text().strip()
+                    if not text:
+                        headers.append("Opponent")
                     else:
-                        cell_text.append(cell.text)
-                cell_dict = dict(zip(headers, cell_text))
-                cell_dict['Player'] = player.name
-                total_data.append(cell_dict)
-            driver.close()
-        except Exception as e:
-            print(e)
+                        headers.append(text)
+                headers.append("Won")
 
-        return total_data
+                rows = table.query_selector("tbody").query_selector_all("tr")
+                total_data = []
+                for row in rows:
+                    cell_data = row.query_selector_all("td")
+                    cell_text = []
+                    for i, cell in enumerate(cell_data):
+                        if i == 6:
+                            # The opponent is in <a> tag
+                            opponent_link = cell.query_selector("a")
+                            opponent = opponent_link.inner_text().strip()
+
+                            # Get full text to determine who won
+                            full_text = cell.inner_text()
+                            # Check if current player is the winner (opponent appears after "d." in the text)
+                            if full_text.find(opponent) < full_text.find(" d. "):
+                                # Current player is the winner
+                                won = False
+                            else:
+                                won = True
+                            cell_text.append(opponent)
+                        elif i == 16:
+                            cell_text.append(cell.inner_text())
+                            cell_text.append(won)
+                        else:
+                            cell_text.append(cell.inner_text())
+                    cell_dict = dict(zip(headers, cell_text))
+                    cell_dict['Player'] = player.name
+                    total_data.append(cell_dict)
+                return total_data
+            except Exception as e:
+                print(f"Error in serve results: {e}")
+                return []
+
+        return self._with_page(url, parse_serve_page)
 
     def get_recent_return_results(self, player):
+        url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}&f=r1"
+
+        def parse_return_page(page):
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_selector("#matches", timeout=10000)
+
+                table = page.query_selector("#matches")
+
+                header_elements = table.query_selector_all("th")
+                headers = []
+
+                for header in header_elements:
+                    text = header.inner_text().strip()
+                    if not text:
+                        headers.append("Opponent")
+                    else:
+                        headers.append(text)
+
+                headers = [header.inner_text().strip() for header in header_elements]
+                rows = table.query_selector("tbody").query_selector_all("tr")
+                total_data = []
+                for row in rows:
+                    cell_data = row.query_selector_all("td")
+                    cell_text = []
+                    for i, cell in enumerate(cell_data):
+                        cell_text.append(cell.inner_text())
+                    cell_dict = dict(zip(headers, cell_text))
+                    cell_dict['Player'] = player.name
+                    total_data.append(cell_dict)
+                return total_data
+            except Exception as e:
+                print(f"Error in return results: {e}")
+                return []
+
+        return self._with_page(url, parse_return_page)
+
+    def _with_page(self, url, fn):
+        """Helper function to manage Playwright browser context"""
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--disable-dev-shm-usage","--no-sandbox"])
+            context = browser.new_context(
+                user_agent=("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+                viewport={"width": 1280, "height": 900},
+                java_script_enabled=True,
+            )
+            context.set_default_timeout(30_000)
+            page = context.new_page()
+            # Block images for speed
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type == "image" else route.continue_())
+            try:
+                return fn(page)
+            finally:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+                try:
+                    context.close()
+                except Exception:
+                    pass
+                try:
+                    browser.close()
+                except Exception:
+                    pass
+
     @staticmethod
-    def get_recent_return_results(player):
-        # Set up Chrome options
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Block images for faster loading
-        chrome_options.add_experimental_option("prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Disable images
-        })
-
-        # Initialize driver
-        driver = webdriver.Chrome(options=chrome_options)
-        try:
-            driver.get(f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}&f=r1")
-
-            table = driver.find_element(By.ID, "matches")
-
-            header_data = table.find_elements(By.TAG_NAME, "th")
-            headers = []
-
-            for header in header_data:
-                print(header.text)
-                if not header.text.strip():
-                    headers.append("Opponent")
-                else:
-                    headers.append(header.text.strip())
-
-            headers = [header.text.strip() for header in header_data]
-            rows = table.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
-            total_data = []
-            for row in rows:
-                cell_data = row.find_elements(By.TAG_NAME, "td")
-                cell_text = []
-                for i, cell in enumerate(cell_data):
-                    cell_text.append(cell.text)
-                cell_dict = dict(zip(headers, cell_text))
-                cell_dict['Player'] = player.name
-                total_data.append(cell_dict)
-            pprint('--------------------------------------',total_data)
-            driver.close()
-        except Exception as e:
-            print(e)
-
-        return total_data
-
-    def pctg_to_dec(self, pctg):
+    def pctg_to_dec(pctg):
         return float(pctg.replace("%", "")) / 100
-
 
     @staticmethod
     def player_match_defaults(row, opponent):
+        pprint(row)
         date_str = row['Date']
         clean_date = re.sub(r"[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]", "-", date_str.strip())
         parsed_date = datetime.strptime(clean_date, "%d-%b-%Y").date()
@@ -255,29 +252,42 @@ class Command(BaseCommand):
             'won': row['Won']
         }
 
+    def serve_stats_defaults(self, row):
+        # Handle break points saved (format: "saved/faced")
+        bp_saved, bp_faced = None, None
+        if row.get('BPSvd'):
+            bp_parts = (row.get('BPSvd') or '').split('/')
+            if len(bp_parts) == 2:
+                bp_saved = int(bp_parts[0])
+                bp_faced = int(bp_parts[1])
 
-    @staticmethod
-    def serve_stats_defaults(row):
         return {
             'dominance_ratio': row['DR'],
-            'ace_pctg': pctg_to_dec(row['A%']),
-            'df_pctg': pctg_to_dec(row['DF%']),
-            'fs_pctg': pctg_to_dec(row['1stIn']),
-            'fs_w_pctg': pctg_to_dec(row['1st%']),
-            'ss_w_pctg': pctg_to_dec(row['2nd%']),
-            'bp_saved': row['BPSvd'],
+            'ace_pctg': self.pctg_to_dec(row['A%']),
+            'df_pctg': self.pctg_to_dec(row['DF%']),
+            'fs_pctg': self.pctg_to_dec(row['1stIn']),
+            'fs_w_pctg': self.pctg_to_dec(row['1st%']),
+            'ss_w_pctg': self.pctg_to_dec(row['2nd%']),
+            'bp_saved': bp_saved,
+            'bp_faced': bp_faced,
             'time': row['Time']
         }
 
-    @staticmethod
-    def return_stats_defaults(row):
+    def return_stats_defaults(self, row):
+        bp_conv, bp_chances = None, None
+        if row.get('BPCnv'):
+            bp_parts = (row.get('BPCnv') or '').split('/')
+            if len(bp_parts) == 2:
+                bp_conv = int(bp_parts[0])
+                bp_chances = int(bp_parts[1])
         return {
             'dominance_ratio': row['DR'],
-            'total_p_w': pctg_to_dec(row['TPW']),
-            'return_p_w': pctg_to_dec(row['RPW']),
-            'v_ace_pctg': pctg_to_dec(row['vA%']),
-            'v_fs_pctg': pctg_to_dec(row['v1st%']),
-            'v_ss_pctg': pctg_to_dec(row['v2nd%']),
-            'bp_conv': row['BPCnv'],
+            'total_p_w': self.pctg_to_dec(row['TPW']),
+            'return_p_w': self.pctg_to_dec(row['RPW']),
+            'v_ace_pctg': self.pctg_to_dec(row['vA%']),
+            'v_fs_pctg': self.pctg_to_dec(row['v1st%']),
+            'v_ss_pctg': self.pctg_to_dec(row['v2nd%']),
+            'bp_conv': bp_conv,
+            'bp_chances': bp_chances,
             'time': row['Time']
         }

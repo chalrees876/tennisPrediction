@@ -123,7 +123,14 @@ class PlayerMatch(models.Model):
     completed = models.BooleanField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.player.name} v {self.opponent.name} - {self.tournament} {self.date}"
+        if self.completed:
+            if self.won:
+                return f"{self.player} d. {self.opponent} - {self.score} @ {self.tournament}"
+            else:
+                return f"{self.opponent} d. {self.player} - {self.score} @ {self.tournament}"
+
+        else:
+            return f"{self.player} vs. {self.opponent} - {self.score} @ {self.tournament}"
 
 
 class PlayerMatchServeStats(models.Model):

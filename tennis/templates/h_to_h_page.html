@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %} H2H - Tennis Predictions{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <h2>{{ player.name }} vs. {{ opponent.name }}</h2>
+        {% if player_wins > opponent_wins %}
+            <span>{{ player.name }} leads {{ player_wins }} - {{ opponent_wins }}</span>
+        {% elif opponent_wins > player_wins %}
+            <span>{{ opponent.name }} leads {{ opponent_wins }} - {{ player_wins }}</span>
+        {% else %}
+            <span>Ties {{ player_wins }} - {{ opponent_wins }}</span>
+        {% endif %}
+
+</div>
+{% endblock %}

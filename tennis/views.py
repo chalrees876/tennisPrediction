@@ -60,7 +60,7 @@ def home(request):
     return render(request, "home.html", {"matches": matches})
 
 def player_page(request, player_id):
-    recent_matches = PlayerMatch.objects.filter(Q(completed=True), Q(player_id=player_id) | Q(opponent_id=player_id)).order_by('-date')
+    recent_matches = PlayerMatch.objects.filter(Q(completed=True), Q(player_id=player_id)).order_by('-date')
     player = Player.objects.get(id=player_id)
 
     return render(request, "player_page.html", {"player": player, "recent_matches": recent_matches})
@@ -69,7 +69,7 @@ def match_page(request, match_id):
     match = PlayerMatch.objects.get(id=match_id)
     return render(request, "match_page.html", {"match": match})
 
-def h2h_page(request, match_id):
+def h_to_h_page(request, match_id):
     match = PlayerMatch.objects.get(id=match_id)
     player = match.player
     opponent = match.opponent
@@ -83,4 +83,4 @@ def h2h_page(request, match_id):
             opponent_wins += 1
 
 
-    return render(request, "h_page.html", {"h2h_matches": h2h_matches, "player_wins": player_wins, "opponent_wins": opponent_wins})
+    return render(request, "h_to_h_page.html", {"h2h_matches": h2h_matches, "player_wins": player_wins, "opponent_wins": opponent_wins, "player": player, "opponent": opponent})
