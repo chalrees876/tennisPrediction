@@ -14,7 +14,7 @@ class TennisDataCollector:
     def __init__(self, start_date, end_date):
         self.start_date = start_date
         self.end_date = end_date
-        self.feature_engineer = TennisFeatureEngineer(window_days=60)
+        self.feature_engineer = TennisFeatureEngineer()
 
     def collect_training_data(self):
         """Collect matches with features and outcomes for training"""

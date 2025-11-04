@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import timedelta
-from django.db.models import Avg
+from django.db.models import Avg, Q, Sum, Case, When
 from typing import Dict, Tuple, Optional
 
 # Import your models. Adjust names/paths if needed.
@@ -40,7 +40,7 @@ class TennisFeatureEngineer:
         match_features = fe.create_match_features(match, include_adjusted=False)
     """
 
-    def __init__(self, window_days: int = 100):
+    def __init__(self, window_days: int = 365):
         self.window_days = window_days
         self.features = []  # optional collection of features over calls
 
@@ -83,9 +83,12 @@ class TennisFeatureEngineer:
             surface_key = surface.lower() if surface else None
 
             mf: Dict = {}
+            mf['h2h'] = self.head_to_head_diff(p1, p2, match_date)
             mf['fatigue_diff'] = (p1_feat['fatigue_factor'] - p2_feat['fatigue_factor'])
+            mf['serve_rating'] = (p1_feat['serve_rating'] - p2_feat['serve_rating'])
             mf['rank_diff'] = p1_rank - p2_rank
             mf['rank_strength_diff'] = p1_strength - p2_strength
+            mf['rank_ratio'] = p1_strength / (p2_strength + 1e-6)
             mf['recent_form'] = p1_feat['recent_form'] - p2_feat['recent_form']
             mf['win_rate'] = p1_feat['win_rate'] - p2_feat['win_rate']
             mf['dominance_ratio'] = p1_feat['dominance_ratio'] - p2_feat['dominance_ratio']
@@ -100,14 +103,13 @@ class TennisFeatureEngineer:
             mf['v_ss'] = p1_feat['v_ss'] - p2_feat['v_ss']
             mf['bp_conv_pctg'] = p1_feat['bp_conv_p'] - p2_feat['bp_conv_p']
 
-            keep = ['fatigue_diff', 'rank_strength_diff', 'recent_form', 'win_rate', 'dominance_ratio', 'fs_w', 'fs_p', 'df_p', 'ss_w', 'ace_p', 'bp_saved_pctg', 'v_fs', 'v_ace', 'v_ss', 'bp_conv_pctg']
+            keep = ['h2h', 'fatigue_diff', 'serve_rating', 'rank_ratio', 'recent_form', 'win_rate', 'bp_conv_pctg']
 
             # Optional per-surface win rate (unadjusted) — only if surface exists
             if surface_key:
                 p1_ws = p1_feat.get(f'win_rate_{surface_key}', 0.5)
                 p2_ws = p2_feat.get(f'win_rate_{surface_key}', 0.5)
                 mf[f'win_rate_{surface_key}'] = p1_ws - p2_ws
-                keep += [f'win_rate_{surface_key}']
 
             # Optional adjusted variants (off by default to reduce redundancy/collinearity)
             if include_adjusted:
@@ -170,7 +172,7 @@ class TennisFeatureEngineer:
 
             # get number of matches player has played over the last two weeks.
 
-            feat['fatigue_factor'] = self._fatigue_bucket(n_recent_results)
+            feat['fatigue_factor'] = self.fatigue_factor(player, date)
 
             # Opponent rank average (as stored on PlayerMatch as-of match time)
             # If your schema uses a different field, adjust below.
@@ -214,6 +216,8 @@ class TennisFeatureEngineer:
                 feat['bp_conv_p'] = 0.5
             else:
                 feat['bp_conv_p'] = bp_conv / bp_chance
+
+            feat['serve_rating'] = feat['fs_w'] * 0.7 + feat['ss_w'] * 0.3
 
             # Dominance ratio from serve stats table (pre-match only)
             dom = PlayerMatchServeStats.objects.filter(
@@ -301,22 +305,54 @@ class TennisFeatureEngineer:
     # ---------- Utilities ----------
 
     @staticmethod
-    def _fatigue_bucket(n_matches: int) -> float:
-        if n_matches == 0:
-            return 0
-        elif n_matches <= 3:
-            return 0.1
-        elif 3 < n_matches <= 4:
-            return 0.3
-        elif 4 < n_matches <= 6:
-            return 0.6
-        elif 6 < n_matches <= 8:
-            return 0.8
-        else:
-            return 1.0
+    def fatigue_factor(player, match_date, days_window=30) -> float:
+        """Consider match density in recent period"""
+        recent_matches = PlayerMatch.objects.filter(
+            player=player,
+            date__lt=match_date,
+            date__gte=match_date - timedelta(days=days_window),
+            completed=True
+        ).count()
+
+        return recent_matches / 10.0
 
     @staticmethod
     def _rank_strength(rank: Optional[int], r0: float = 20.0, gamma: float = 2.0) -> float:
         if rank is None or rank <= 0:
             return 0.0  # neutral/weak if unknown
         return 1.0 / (1.0 + (rank / r0) ** gamma)
+
+    def head_to_head_diff(self, p1, p2, match_date):
+        try:
+            p1_h2h_qs = PlayerMatch.objects.filter(
+                Q(player=p1, opponent=p2, date__lt=match_date)
+            )
+
+            p2_h2h_qs = PlayerMatch.objects.filter(
+                Q(player=p2, opponent=p1, date__lt=match_date)
+            )
+
+            if p1_h2h_qs.exists() and p2_h2h_qs.exists():
+                p1_wins = p1_h2h_qs.aggregate(
+                    wins=Sum(
+                        Case(
+                            When(won=True, then=1),
+                        default=0,
+                        )
+                    )
+                )
+
+                p2_wins = p2_h2h_qs.aggregate(
+                    wins=Sum(
+                        Case(
+                            When(won=True, then=1),
+                            default=0,
+                        )
+                    )
+                )
+                return p1_wins['wins'] / p2_wins['wins'] if p2_wins['wins'] != 0 else p1_wins['wins']
+            else:
+                return 0
+
+        except Exception as e:
+            print(f'\033[31mError creating player features: {e}\033[0m')

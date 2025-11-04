@@ -33,7 +33,7 @@
               </td>
               <!-- Log Reg -->
               <td class="text-center ps-4">
-                {% if m.ens_ml_p1|slice:":1" == "-" %}
+                {% if m.log_reg_ml_p1|slice:":1" == "-" %}
                   <span class="badge text-bg-primary ms-2">{{ m.match.player.name }} {{ m.log_reg_ml_p1 }}</span>
                 {% else %}
                   <span class="badge text-bg-success ms-2">{{ m.match.player.name }} +{{ m.log_reg_ml_p1 }}</span>
@@ -41,7 +41,7 @@
               </td>
 
               <td class="text-center ps-4">
-                {% if m.ens_ml_p1|slice:":1" == "-" %}
+                {% if m.rf_ml_p1|slice:":1" == "-" %}
                   <span class="badge text-bg-primary ms-2">{{ m.match.player.name }} {{ m.rf_ml_p1 }}</span>
                 {% else %}
                   <span class="badge text-bg-success ms-2">{{ m.match.player.name }} +{{ m.rf_ml_p1 }}</span>
