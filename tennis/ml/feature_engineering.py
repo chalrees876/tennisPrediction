@@ -83,7 +83,9 @@ class TennisFeatureEngineer:
             surface_key = surface.lower() if surface else None
 
             mf: Dict = {}
-            mf['h2h'] = self.head_to_head_diff(p1, p2, match_date)
+            h2h_data = self.head_to_head_features(p1, p2, match_date=match_date)
+            mf['h2h_win_ratio'] = h2h_data['h2h_win_ratio']
+            mf['h2h_recent_momentum'] = h2h_data['h2h_recent_momentum']
             mf['fatigue_diff'] = (p1_feat['fatigue_factor'] - p2_feat['fatigue_factor'])
             mf['serve_rating'] = (p1_feat['serve_rating'] - p2_feat['serve_rating'])
             mf['rank_diff'] = p1_rank - p2_rank
@@ -103,7 +105,7 @@ class TennisFeatureEngineer:
             mf['v_ss'] = p1_feat['v_ss'] - p2_feat['v_ss']
             mf['bp_conv_pctg'] = p1_feat['bp_conv_p'] - p2_feat['bp_conv_p']
 
-            keep = ['h2h', 'fatigue_diff', 'serve_rating', 'rank_ratio', 'recent_form', 'win_rate', 'bp_conv_pctg']
+            keep = ['h2h_win_ratio', 'h2h_recent_momentum', 'fatigue_diff', 'serve_rating', 'rank_ratio', 'recent_form', 'win_rate', 'bp_conv_pctg']
 
             # Optional per-surface win rate (unadjusted) — only if surface exists
             if surface_key:
@@ -322,37 +324,74 @@ class TennisFeatureEngineer:
             return 0.0  # neutral/weak if unknown
         return 1.0 / (1.0 + (rank / r0) ** gamma)
 
-    def head_to_head_diff(self, p1, p2, match_date):
+    def head_to_head_features(self, p1, p2, match_date):
+        """
+        Returns two focused H2H features:
+        1. Dominance-weighted win ratio (emphasizes differential like 9-1 vs 100-92)
+        2. Recency-weighted performance
+        """
         try:
-            p1_h2h_qs = PlayerMatch.objects.filter(
-                Q(player=p1, opponent=p2, date__lt=match_date)
-            )
+            # Get all previous matches between these players
+            h2h_matches = PlayerMatch.objects.filter(
+                (Q(player=p1, opponent=p2) | Q(player=p2, opponent=p1)),
+                date__lt=match_date,
+                completed=True
+            ).order_by('-date')
 
-            p2_h2h_qs = PlayerMatch.objects.filter(
-                Q(player=p2, opponent=p1, date__lt=match_date)
-            )
+            total_matches = h2h_matches.count()
 
-            if p1_h2h_qs.exists() and p2_h2h_qs.exists():
-                p1_wins = p1_h2h_qs.aggregate(
-                    wins=Sum(
-                        Case(
-                            When(won=True, then=1),
-                        default=0,
-                        )
-                    )
-                )
+            if total_matches == 0:
+                return {
+                    'h2h_win_ratio': 0.5,  # Neutral
+                    'h2h_recent_momentum': 0.0,  # No momentum
+                }
 
-                p2_wins = p2_h2h_qs.aggregate(
-                    wins=Sum(
-                        Case(
-                            When(won=True, then=1),
-                            default=0,
-                        )
-                    )
-                )
-                return p1_wins['wins'] / p2_wins['wins'] if p2_wins['wins'] != 0 else p1_wins['wins']
+            # Calculate win counts
+            p1_wins = 0
+            for match in h2h_matches:
+                p1_won_match = (match.player == p1 and match.won) or (match.player == p2 and not match.won)
+                if p1_won_match:
+                    p1_wins += 1
+
+            # Feature 1: Simple win ratio with confidence weighting
+            win_ratio = p1_wins / total_matches
+
+            # Apply confidence-based smoothing - more matches = more confidence
+            # This naturally handles the 9-1 vs 100-92 case
+            if total_matches < 5:
+                # Low confidence: shrink toward neutral
+                h2h_win_ratio = 0.5 + (win_ratio - 0.5) * (total_matches / 5)
             else:
-                return 0
+                # High confidence: use actual ratio
+                h2h_win_ratio = win_ratio
+
+            # Feature 2: Recency-weighted momentum (same as before)
+            recent_weighted_sum = 0
+            total_recent_weight = 0
+
+            recent_matches_to_consider = min(5, total_matches)
+
+            for i in range(recent_matches_to_consider):
+                match = h2h_matches[i]
+                p1_won_match = (match.player == p1 and match.won) or (match.player == p2 and not match.won)
+
+                weight = 0.8 ** i  # Exponential decay
+                recent_weighted_sum += weight if p1_won_match else -weight
+                total_recent_weight += weight
+
+            if total_recent_weight > 0:
+                h2h_recent_momentum = recent_weighted_sum / total_recent_weight
+            else:
+                h2h_recent_momentum = 0.0
+
+            return {
+                'h2h_win_ratio': round(h2h_win_ratio, 4),
+                'h2h_recent_momentum': round(h2h_recent_momentum, 4),
+            }
 
         except Exception as e:
-            print(f'\033[31mError creating player features: {e}\033[0m')
+            print(f'\033[31mError creating improved H2H features: {e}\033[0m')
+            return {
+                'h2h_win_ratio': 0.5,
+                'h2h_recent_momentum': 0.0,
+            }

@@ -1,78 +1,273 @@
 {% extends 'base.html' %}
-{% block title %}Home - Tennis Predictions{% endblock %}
+
+{% block title %}Tennis Betting Predictions - AI-Powered Match Analysis{% endblock %}
+
 {% block content %}
-
-<h1 class="h3 fw-semibold mb-3">Upcoming Matches</h1>
-
-<div class="card shadow-sm">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th class="ps-4">Match</th>
-              <th class="text-center ps-4">MoneyLine (Logistic Regression)</th>
-              <th class="text-center ps-4">MoneyLine (Random Forest)</th>
-              <th class="text-center ps-4">MoneyLine</th>
-              <th class="text-end ps-4">H2H</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for m in matches %}
-            <tr>
-              <td class="ps-4">
-                <a class="link-dark link-underline-opacity-0 link-underline-opacity-100-hover fw-semibold"
-                   href="{% url 'tennis:player_page' m.match.player.id %}">
-                  {{ m.match.player }}
-                </a>
-                <span class="text-muted">vs</span>
-                <a class="link-dark link-underline-opacity-0 link-underline-opacity-100-hover fw-semibold"
-                   href="{% url 'tennis:player_page' m.match.opponent.id %}">
-                  {{ m.match.opponent }}
-                </a>
-              </td>
-              <!-- Log Reg -->
-              <td class="text-center ps-4">
-                {% if m.log_reg_ml_p1|slice:":1" == "-" %}
-                  <span class="badge text-bg-primary ms-2">{{ m.match.player.name }} {{ m.log_reg_ml_p1 }}</span>
-                {% else %}
-                  <span class="badge text-bg-success ms-2">{{ m.match.player.name }} +{{ m.log_reg_ml_p1 }}</span>
-                {% endif %}
-              </td>
-
-              <td class="text-center ps-4">
-                {% if m.rf_ml_p1|slice:":1" == "-" %}
-                  <span class="badge text-bg-primary ms-2">{{ m.match.player.name }} {{ m.rf_ml_p1 }}</span>
-                {% else %}
-                  <span class="badge text-bg-success ms-2">{{ m.match.player.name }} +{{ m.rf_ml_p1 }}</span>
-                {% endif %}
-              </td>
-
-              <td class="text-center ps-4">
-                {% if m.ens_ml_p1|slice:":1" == "-" %}
-                  <span class="badge text-bg-primary ms-2">{{ m.match.player.name }} {{ m.ens_ml_p1 }}</span>
-                {% else %}
-                  <span class="badge text-bg-success ms-2">{{ m.match.player.name }} +{{ m.ens_ml_p1 }}</span>
-                {% endif %}
-              </td>
-
-              <td class="text-end ps-4">
-                <a class="link-dark link-underline-opacity-0 link-underline-opacity-100-hover fw-semibold"
-                   href="{% url 'tennis:h_to_h_page' m.match.id %}">
-                  Here
-                </a>
-              </td>
-            </tr>
-
-          {% empty %}
-            <tr><td class="text-center text-muted py-4" colspan="4">No upcoming matches.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<!-- Hero Section -->
+<div class="row align-items-center py-5 mb-4">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold text-primary mb-3">Smart Tennis Betting</h1>
+        <p class="lead mb-4">
+            AI-powered match predictions and value betting opportunities.
+            Get data-driven insights to make smarter tennis bets.
+        </p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="#how-it-works" class="btn btn-primary btn-lg">How It Works</a>
+            <a href="{% url 'tennis:all_matches' %}" class="btn btn-outline-primary btn-lg">View Upcoming Matches</a>
+        </div>
     </div>
-  </div>
+    <div class="col-lg-6 text-center">
+        <div class="card border-0 bg-light">
+            <div class="card-body p-4">
+                <div class="display-1">🎾</div>
+                <h5 class="card-title">Live Predictions</h5>
+                <p class="card-text">Machine learning models analyzing player performance, form, and match conditions</p>
+            </div>
+        </div>
+    </div>
 </div>
 
-<p class="text-muted small mt-3">P(win) are model probabilities; ML are fair (no-vig) American moneylines.</p>
+<!-- Quick Start Guide -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="h3 mb-4 text-center">Get Started in 3 Simple Steps</h2>
+        <div class="row text-center">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary display-6 mb-3">1</div>
+                        <h5>Browse Matches</h5>
+                        <p class="text-muted">Check upcoming matches with our AI predictions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary display-6 mb-3">2</div>
+                        <h5>Compare Odds</h5>
+                        <p class="text-muted">See our fair odds vs. sportsbook offerings</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary display-6 mb-3">3</div>
+                        <h5>Place Smart Bets</h5>
+                        <p class="text-muted">Bet only when sportsbooks offer better odds than our fair value</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- How It Works Section -->
+<div id="how-it-works" class="row py-5 border-top">
+    <div class="col-lg-8 mx-auto">
+        <h2 class="h3 text-center mb-5">Understanding Our Predictions</h2>
+
+        <!-- Model Probabilities -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h4 class="h5 mb-0">🤖 What Do the Percentages Mean?</h4>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <p>Our machine learning models calculate the <strong>true probability</strong> of each player winning:</p>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">🎯 <strong>Logistic Regression:</strong> Statistical model analyzing player features</li>
+                            <li class="mb-2">🌲 <strong>Random Forest:</strong> Ensemble of decision trees for robust predictions</li>
+                            <li class="mb-2">⚡ <strong>Ensemble Model:</strong> Combined wisdom of all models (our primary recommendation)</li>
+                        </ul>
+                        <p class="mb-0"><strong>Example:</strong> 65% = player has 65% chance to win based on historical data analysis</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="bg-light rounded p-4">
+                            <div class="h4 text-primary mb-1">65%</div>
+                            <small class="text-muted">Win Probability</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No-Vig Explained -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h4 class="h5 mb-0">💰 What is "No-Vig" or "Fair Odds"?</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p>Sportsbooks build in a profit margin (the "vig" or "juice") to all bets. We remove this to show you the <strong>true fair value</strong>.</p>
+
+                        <div class="bg-light p-3 rounded mb-3">
+                            <h6 class="fw-bold">Sportsbook Example:</h6>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div>Player A: -150</div>
+                                    <small class="text-muted">Implied: 60%</small>
+                                </div>
+                                <div class="col-6">
+                                    <div>Player B: +130</div>
+                                    <small class="text-muted">Implied: 43%</small>
+                                </div>
+                            </div>
+                            <div class="text-center text-muted small mt-1">Total: 103% (3% vig)</div>
+                        </div>
+
+                        <div class="bg-light p-3 rounded">
+                            <h6 class="fw-bold">Our Fair Odds:</h6>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div>Player A: -140</div>
+                                    <small class="text-muted">True: 58%</small>
+                                </div>
+                                <div class="col-6">
+                                    <div>Player B: +140</div>
+                                    <small class="text-muted">True: 42%</small>
+                                </div>
+                            </div>
+                            <div class="text-center text-muted small mt-1">Total: 100% (no vig)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">Key Takeaway</h6>
+                            <p class="mb-0 small">Our odds represent the true probability without bookmaker profit margins.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Betting Strategy -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h4 class="h5 mb-0">🎯 When Should You Bet?</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">✅ Good Bet</h6>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Sportsbook offers BETTER odds than our fair value</strong></p>
+                                <div class="example-box p-3 bg-light rounded mb-3">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="fw-bold text-success">Our Fair:</div>
+                                            <div>+150</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="fw-bold text-success">Sportsbook:</div>
+                                            <div>+180</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="small text-muted mb-0">You're getting more value than the true probability suggests</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100 border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0">❌ Avoid Betting</h6>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Sportsbook offers WORSE odds than our fair value</strong></p>
+                                <div class="example-box p-3 bg-light rounded mb-3">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="fw-bold text-danger">Our Fair:</div>
+                                            <div>-140</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="fw-bold text-danger">Sportsbook:</div>
+                                            <div>-160</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="small text-muted mb-0">You're getting less value than the true probability suggests</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">💡 Pro Tip: Look for Value Discrepancies</h6>
+                    <p class="mb-0">The biggest profits come when our models strongly disagree with sportsbook odds. When we show 70% probability but sportsbooks price it like 60%, that's your edge!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Reference -->
+<div class="row py-5 border-top bg-light rounded">
+    <div class="col-lg-10 mx-auto">
+        <h3 class="h4 text-center mb-4">Quick Reference Guide</h3>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-0">
+                    <div class="card-body text-center">
+                        <div class="text-primary h1 mb-3">📊</div>
+                        <h5>Reading Match Cards</h5>
+                        <ul class="list-unstyled text-start">
+                            <li class="mb-2"><strong>Win Probability:</strong> Our model's predicted chance to win</li>
+                            <li class="mb-2"><strong>Fair Odds:</strong> True value without bookmaker margin</li>
+                            <li class="mb-2"><strong>Bet Recommendation:</strong> When our odds beat sportsbooks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-0">
+                    <div class="card-body text-center">
+                        <div class="text-primary h1 mb-3">⚡</div>
+                        <h5>Betting Strategy</h5>
+                        <ul class="list-unstyled text-start">
+                            <li class="mb-2">Only bet when sportsbook odds are better than our fair odds</li>
+                            <li class="mb-2">Focus on matches with >55% predicted probability</li>
+                            <li class="mb-2">Compare multiple sportsbooks for best prices</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="row py-5 text-center">
+    <div class="col-lg-8 mx-auto">
+        <h3 class="h2 mb-3">Ready to Find Value Bets?</h3>
+        <p class="lead mb-4">Start browsing today's matches and compare our AI predictions with sportsbook odds.</p>
+        <a href="{% url 'tennis:home' %}" class="btn btn-primary btn-lg px-5">View Today's Matches</a>
+    </div>
+</div>
+
+<style>
+.example-box {
+    border-left: 4px solid #dee2e6;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.display-6 {
+    font-size: 2.5rem;
+    font-weight: 300;
+}
+</style>
 {% endblock %}

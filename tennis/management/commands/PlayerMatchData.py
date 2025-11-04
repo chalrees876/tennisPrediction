@@ -21,7 +21,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            players = Player.objects.all()
+            players = Player.objects.filter(ranking__lte=400, ranking__gt=0)
         except Player.DoesNotExist:
             self.stdout.write("Player 'Ben Shelton' not found.")
         player_count = 0
