@@ -19,9 +19,17 @@ class Command(BaseCommand):
     and PlayerMatchReturnStats (holds return stats for specified player).
     """
 
+    def add_arguments(self, parser):
+        parser.add_argument("--min-rank", type=int, default=1)
+        parser.add_argument("--max-rank", type=int, default=200)
+
     def handle(self, *args, **options):
+
+        min_rank = options["min_rank"]
+        max_rank = options["max_rank"]
+
         try:
-            players = Player.objects.filter(ranking__lte=200, ranking__gt=0)
+            players = Player.objects.filter(ranking__lte=max_rank, ranking__gt=min_rank)
         except Player.DoesNotExist:
             self.stdout.write("Player 'Ben Shelton' not found.")
         player_count = 0
