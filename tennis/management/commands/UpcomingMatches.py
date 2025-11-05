@@ -1,4 +1,5 @@
 import datetime
+from datetime import timedelta
 from pprint import pprint
 import joblib
 from django.core.management import BaseCommand
@@ -52,7 +53,7 @@ class Command(BaseCommand):
         feats = bundle["features"]
 
         try:
-            upcoming = PlayerMatch.objects.filter(completed=False).order_by('rank')
+            upcoming = PlayerMatch.objects.all().order_by('rank')
             for match in upcoming:
                 reverse_exists = any(
                     m['player']==match.opponent and m['opponent']==match.player for m in match_list
@@ -90,6 +91,10 @@ class Command(BaseCommand):
 
                 match_odds_list.append({
                     "match": match.id,
+                    "tournament": match.tournament,
+                    "round": match.round,
+                    "date": match.date,
+                    "completed": match.completed,
                     "log_reg_prob": p_lr,
                     "rf_prob": p_rf,
                     "ens_prob": p_ens,

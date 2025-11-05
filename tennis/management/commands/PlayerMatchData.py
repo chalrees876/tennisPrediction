@@ -21,7 +21,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--min-rank", type=int, default=1)
-        parser.add_argument("--max-rank", type=int, default=200)
+        parser.add_argument("--max-rank", type=int, default=100)
 
     def handle(self, *args, **options):
 
@@ -31,7 +31,7 @@ class Command(BaseCommand):
         try:
             players = Player.objects.filter(ranking__lte=max_rank, ranking__gt=min_rank)
         except Player.DoesNotExist:
-            self.stdout.write("Player 'Ben Shelton' not found.")
+            self.stdout.write("Player not found")
         player_count = 0
         for player in players:
             try:
