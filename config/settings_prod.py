@@ -3,8 +3,8 @@ from .settings_base import *
 import os
 
 ALLOWED_HOSTS = [
-    "https://127.0.0.1", "localhost",
-    "18.216.90.98",        # your public IP
+    "127.0.0.1", "localhost",
+    "18.225.10.194",        # your public IP
     ".compute-1.amazonaws.com",
 "tennisml.duckdns.org"  # EC2 public DNS
 ]
