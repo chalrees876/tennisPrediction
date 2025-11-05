@@ -2,12 +2,8 @@ import os
 from .settings_base import *
 import os
 
-ALLOWED_HOSTS = [
-    "127.0.0.1", "localhost",
-    "18.225.10.194",        # your public IP
-    ".compute-1.amazonaws.com",
-"tennisml.duckdns.org"  # EC2 public DNS
-]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "18.225.10.194", ".compute-1.amazonaws.com"]
+
 
 def _csv(name, default=""):
     raw = os.getenv(name, default)
@@ -29,10 +25,10 @@ DEBUG = os.getenv("DEBUG", "0") in ("1", "true", "True")
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "tennisiqdatabase",
-        "USER": "masteruser",
-        "PASSWORD": "password",
-        "HOST": "tennisiqdatabase.c7sgmciq2ehf.us-east-2.rds.amazonaws.com",
-        "PORT": "5432",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
     }
 }
