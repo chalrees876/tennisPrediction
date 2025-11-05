@@ -2,17 +2,9 @@ import datetime
 from pprint import pprint
 import joblib
 from django.core.management import BaseCommand
-from django.db import transaction
-from django.db.models import Q
 import pandas as pd
-from django.shortcuts import get_object_or_404
-
-from tennis.ml.MachineLearning import MachineLearningModels
-from tennis.ml.TennisDataCollector import TennisDataCollector
 from tennis.ml.feature_engineering import TennisFeatureEngineer
-from tennis.models import Player, PlayerMatch, \
-    Tournament  # add other models with FK to Player if you prefer explicit updates
-
+from tennis.models import PlayerMatch
 
 def pctg_to_dec(pctg):
     return float(pctg.replace("%", "")) / 100
@@ -106,4 +98,5 @@ class Command(BaseCommand):
         except Exception as e:
             print(e)
         df = pd.DataFrame(match_odds_list)
+        pprint(df)
         df.to_csv('tennis/models/probabilities.csv', index=False)

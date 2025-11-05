@@ -21,7 +21,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            players = Player.objects.filter(ranking__lte=400, ranking__gt=0)
+            players = Player.objects.filter(ranking__lte=10, ranking__gt=0)
         except Player.DoesNotExist:
             self.stdout.write("Player 'Ben Shelton' not found.")
         player_count = 0
@@ -39,7 +39,6 @@ class Command(BaseCommand):
                     with transaction.atomic():
                         try:
                             tournament, tournament_created = Tournament.objects.get_or_create(name=row['Tournament'], year=row['Date'][-4:])
-                            tournament_action = 'created' if tournament_created else 'update'
                             tournament_action = 'created' if tournament_created else 'got'
 
                             self.stdout.write(
@@ -47,7 +46,6 @@ class Command(BaseCommand):
                             )
 
                             opponent, opponent_created = Player.objects.get_or_create(name=row['Opponent'])
-                            opponent_action = 'created' if opponent_created else 'update'
                             opponent_action = 'created' if opponent_created else 'got'
 
                             self.stdout.write(
@@ -58,6 +56,8 @@ class Command(BaseCommand):
                                 player=player,
                                 opponent=opponent,
                                 tournament=tournament,
+                                date= self.parse_date(row['Date']),
+                                round=row['Rd'],
                                 defaults=self.player_match_defaults(row, opponent))
 
                             match_action = 'created' if match_created else 'update'
@@ -235,16 +235,16 @@ class Command(BaseCommand):
         return float(pctg.replace("%", "")) / 100
 
     @staticmethod
-    def player_match_defaults(row, opponent):
-        pprint(row)
-        date_str = row['Date']
+    def parse_date(date_str):
         clean_date = re.sub(r"[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]", "-", date_str.strip())
         parsed_date = datetime.strptime(clean_date, "%d-%b-%Y").date()
+        return parsed_date
+
+    @staticmethod
+    def player_match_defaults(row, opponent):
         return {
             'completed': row['Completed'],
-            'date': parsed_date,
             'surface': row['Surface'],
-            'round': row['Rd'],
             'rank': row['Rk'],
             'opponent_rank': row['vRk'],
             'opponent': opponent,

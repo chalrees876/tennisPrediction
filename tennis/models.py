@@ -110,17 +110,20 @@ class Tournament(models.Model):
         return f"{self.name}"
 
 class PlayerMatch(models.Model):
-    date = models.DateField(default=None)
-    player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player")
+    date = models.DateField(null=False)
+    player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player", null=False)
     tournament = ForeignKey(Tournament, on_delete=models.CASCADE)
     surface = models.CharField(max_length=20, default="Not Specified")
-    round = models.CharField(max_length=50)
+    round = models.CharField(max_length=50, null=False, blank=False)
     rank = models.IntegerField()
     opponent_rank = models.IntegerField()
-    opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent")
+    opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent", null=False)
     score = models.CharField(max_length=50)
     won = models.BooleanField(default=None, null=True)
     completed = models.BooleanField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("player", "opponent", "round", "tournament", "date")
 
     def __str__(self):
         if self.completed:
@@ -183,7 +186,7 @@ class PlayerPointByPointStats(models.Model):
     deuce_r_w_pctg = models.FloatField()
     ad_r_w_pctg = models.FloatField()
 
-class MatchForm(forms.Form):
+"""class MatchForm(forms.Form):
     player = forms.ModelChoiceField(
         queryset=Player.objects.all(),
         widget=forms.Select(attrs={'id': 'player_select'})
@@ -195,6 +198,6 @@ class MatchForm(forms.Form):
         if self.is_bound:
             raw = self.data.get(self.add_prefix("player")) or self.data.get("player")
             if raw:
-                self.fields["player"].queryset = Player.objects.filter(pk=raw)
+                self.fields["player"].queryset = Player.objects.filter(pk=raw)"""
 
 
