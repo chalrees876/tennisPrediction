@@ -40,7 +40,7 @@ class TennisFeatureEngineer:
         match_features = fe.create_match_features(match, include_adjusted=False)
     """
 
-    def __init__(self, window_days: int = 365):
+    def __init__(self, window_days: int = 150):
         self.window_days = window_days
         self.features = []  # optional collection of features over calls
 
@@ -63,20 +63,8 @@ class TennisFeatureEngineer:
             match_date = match.date
             exclude_id = match.id
 
-            p1_feat = self.create_player_features(p1, match_date, exclude_match_id=exclude_id,
-                                                 include_adjusted=include_adjusted)
-            p2_feat = self.create_player_features(p2, match_date, exclude_match_id=exclude_id,
-                                                 include_adjusted=include_adjusted)
-
-
-
-            p1_rank = match.rank if match.rank > 0 and match.rank is not None else 200
-            p2_rank = match.opponent_rank if match.opponent_rank > 0 and match.opponent_rank is not None else 200
-
-            p1_strength = self._rank_strength(p1_rank, r0=20.0, gamma=2.0)
-            p2_strength = self._rank_strength(p2_rank, r0=20.0, gamma=2.0)
-
-
+            p1_feat = self.create_player_features(p1, match_date, exclude_match_id=exclude_id)
+            p2_feat = self.create_player_features(p2, match_date, exclude_match_id=exclude_id)
 
             # Surface key (ensure it's a string like "Hard"/"Clay"/"Grass")
             surface = (getattr(match, 'surface', '') or '').strip().title()
@@ -88,41 +76,17 @@ class TennisFeatureEngineer:
             mf['h2h_recent_momentum'] = h2h_data['h2h_recent_momentum']
             mf['fatigue_diff'] = (p1_feat['fatigue_factor'] - p2_feat['fatigue_factor'])
             mf['serve_rating'] = (p1_feat['serve_rating'] - p2_feat['serve_rating'])
-            mf['rank_diff'] = p1_rank - p2_rank
-            mf['rank_strength_diff'] = p1_strength - p2_strength
-            mf['rank_ratio'] = p1_strength / (p2_strength + 1e-6)
             mf['recent_form'] = p1_feat['recent_form'] - p2_feat['recent_form']
             mf['win_rate'] = p1_feat['win_rate'] - p2_feat['win_rate']
-            mf['dominance_ratio'] = p1_feat['dominance_ratio'] - p2_feat['dominance_ratio']
-            mf['fs_w'] = p1_feat['fs_w'] - p2_feat['fs_w']
-            mf['fs_p'] = p1_feat['fs_p'] - p2_feat['fs_p']
-            mf['df_p'] = p1_feat['df_p'] - p2_feat['df_p']
-            mf['ss_w'] = p1_feat['ss_w'] - p2_feat['ss_w']
-            mf['ace_p'] = p1_feat['ace_p'] - p2_feat['ace_p']
-            mf['bp_saved_pctg'] = p1_feat['bp_saved_p'] - p2_feat['bp_saved_p']
-            mf['v_fs'] = p1_feat['v_fs'] - p2_feat['v_fs']
-            mf['v_ace'] =p1_feat['v_ace'] - p2_feat['v_ace']
-            mf['v_ss'] = p1_feat['v_ss'] - p2_feat['v_ss']
             mf['bp_conv_pctg'] = p1_feat['bp_conv_p'] - p2_feat['bp_conv_p']
 
-            keep = ['h2h_win_ratio', 'h2h_recent_momentum', 'fatigue_diff', 'serve_rating', 'rank_ratio', 'recent_form', 'win_rate', 'bp_conv_pctg']
+            keep = ['h2h_win_ratio', 'h2h_recent_momentum', 'fatigue_diff', 'serve_rating', 'recent_form', 'win_rate', 'bp_conv_pctg']
 
             # Optional per-surface win rate (unadjusted) — only if surface exists
             if surface_key:
                 p1_ws = p1_feat.get(f'win_rate_{surface_key}', 0.5)
                 p2_ws = p2_feat.get(f'win_rate_{surface_key}', 0.5)
                 mf[f'win_rate_{surface_key}'] = p1_ws - p2_ws
-
-            # Optional adjusted variants (off by default to reduce redundancy/collinearity)
-            if include_adjusted:
-                mf['win_rate_adjusted'] = p1_feat['win_rate_adjusted'] - p2_feat['win_rate_adjusted']
-                mf['dominance_ratio_adjusted'] = p1_feat['dominance_ratio_adjusted'] - p2_feat['dominance_ratio_adjusted']
-                mf['serve_rating_adjusted'] = p1_feat['serve_rating_adjusted'] - p2_feat['serve_rating_adjusted']
-                mf['return_rating_adjusted'] = p1_feat['return_rating_adjusted'] - p2_feat['return_rating_adjusted']
-                if surface_key:
-                    p1_wsa = p1_feat.get(f'win_rate_{surface_key}_adjusted', p1_ws if surface_key else 0.5)
-                    p2_wsa = p2_feat.get(f'win_rate_{surface_key}_adjusted', p2_ws if surface_key else 0.5)
-                    mf[f'win_rate_{surface_key}_adjusted'] = p1_wsa - p2_wsa
 
             result = OrderedDict((k, float(mf.get(k, 0))) for k in keep)
 
@@ -162,7 +126,7 @@ class TennisFeatureEngineer:
 
             feat: Dict = {}
 
-            recent_results_qs = results_qs.filter(date__gte=date - timedelta(days=14))
+            recent_results_qs = results_qs.filter(date__gte=date - timedelta(days=10))
 
             recent_results = list(recent_results_qs)
             n_recent_results = len(recent_results)
@@ -175,11 +139,6 @@ class TennisFeatureEngineer:
             # get number of matches player has played over the last two weeks.
 
             feat['fatigue_factor'] = self.fatigue_factor(player, date)
-
-            # Opponent rank average (as stored on PlayerMatch as-of match time)
-            # If your schema uses a different field, adjust below.
-            avg_opp_rank = results_qs.aggregate(Avg('opponent_rank')).get('opponent_rank__avg')
-            feat['avg_opp_rank'] = avg_opp_rank if avg_opp_rank is not None else 100.0
 
             # Win-rate (overall)
             if n_matches > 0:
@@ -230,21 +189,6 @@ class TennisFeatureEngineer:
 
             dominance_ratio = dom.aggregate(Avg('dominance_ratio')).get('dominance_ratio__avg')
             feat['dominance_ratio'] = dominance_ratio if dominance_ratio is not None else 0.5
-
-            # Optional adjusted variants (off by default)
-            if include_adjusted:
-                opp_strength = 1.0 / max(feat['avg_opp_rank'] + 1e-6, 1e-6)  # guard against tiny/zero
-                bias = self.DEFAULT_BIAS_TERM
-                adj = self.DEFAULT_ADJUSTMENT_FACTOR
-
-                feat['win_rate_adjusted'] = feat['win_rate'] + bias + opp_strength * adj
-                feat['serve_rating_adjusted'] = feat['serve_rating'] + bias + opp_strength * adj
-                feat['return_rating_adjusted'] = feat['return_rating'] + bias + opp_strength * adj
-                feat['dominance_ratio_adjusted'] = feat['dominance_ratio'] + bias + opp_strength * adj
-
-                for surface in ['hard', 'grass', 'clay']:
-                    wr = feat.get(f'win_rate_{surface}', 0.5)
-                    feat[f'win_rate_{surface}_adjusted'] = wr + bias - (feat['avg_opp_rank'] * adj)
 
             return feat
 
@@ -317,12 +261,6 @@ class TennisFeatureEngineer:
         ).count()
 
         return recent_matches / 10.0
-
-    @staticmethod
-    def _rank_strength(rank: Optional[int], r0: float = 20.0, gamma: float = 2.0) -> float:
-        if rank is None or rank <= 0:
-            return 0.0  # neutral/weak if unknown
-        return 1.0 / (1.0 + (rank / r0) ** gamma)
 
     def head_to_head_features(self, p1, p2, match_date):
         """

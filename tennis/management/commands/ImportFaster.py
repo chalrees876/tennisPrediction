@@ -1,4 +1,4 @@
-# tennis/management/commands/import_recent_fastest.py
+# tennis/management/commands/ImportFaster.py
 import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
