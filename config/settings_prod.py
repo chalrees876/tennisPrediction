@@ -45,3 +45,13 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # Optional: tighten referrers for CSRF (leave off if you use cross-site POSTs)
 CSRF_COOKIE_HTTPONLY = True
 
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": True},
+        "django.template": {"handlers": ["console"], "level": "ERROR", "propagate": True},
+    },
+}
