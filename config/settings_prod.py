@@ -7,6 +7,13 @@ def _csv(name, default=""):
     # Return list, stripping whitespace and dropping empties
     return [x.strip() for x in raw.split(",") if x.strip()]
 
+
+import dj_database_url
+DATABASES = {
+    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
+}
+
+
 ALLOWED_HOSTS = _csv(
     "DJANGO_ALLOWED_HOSTS",
     "tennisbetsmart.com,www.tennisbetsmart.com,tennisml.duckdns.org,localhost,127.0.0.1",
@@ -25,19 +32,6 @@ if not SECRET_KEY:
 
 DEBUG = os.getenv("DEBUG", "0") in ("1", "true", "True")
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
-        "OPTIONS": {"connect_timeout": 5}
-    }
-}
-
-
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
@@ -50,3 +44,4 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Optional: tighten referrers for CSRF (leave off if you use cross-site POSTs)
 CSRF_COOKIE_HTTPONLY = True
+
