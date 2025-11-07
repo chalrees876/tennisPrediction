@@ -6,8 +6,8 @@ from django.core.management import BaseCommand, call_command
 class Command(BaseCommand):
     def handle(self, *args, **options):
         commands = [
-            #"EloImport",
-            #"PlayerStats",
+            "EloImport",
+            "PlayerStats",
             "PlayerMatchData",
             "TrainModel",
             "UpcomingMatches"
