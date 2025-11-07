@@ -21,7 +21,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--min-rank", type=int, default=1)
-        parser.add_argument("--max-rank", type=int, default=100)
+        parser.add_argument("--max-rank", type=int, default=500)
 
     def handle(self, *args, **options):
 

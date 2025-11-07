@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from sklearn import metrics
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -27,10 +28,8 @@ class MachineLearningModels:
         y = df['target'].astype(int)
         X = df.drop(columns=['target', 'match_id', 'date', 'player_id', 'opponent_id'], errors='ignore').fillna(0)
 
-        # 2) Temporal split (no leakage) - using your existing temporal split
-        X_train, X_test, y_train, y_test = self._time_split(X, y, frac=0.8)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 
-        # 3) Train logistic regression with time series cross-validation
         model = LogisticRegression(
             random_state=42,
             max_iter=10000,
@@ -38,11 +37,16 @@ class MachineLearningModels:
             class_weight='balanced'
         )
         model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
+        print("Confusion matrix:\n", cnf_matrix)
 
         # 4) Model calibration for better probability estimates
         tscv = TimeSeriesSplit(n_splits=5)
         calibrated_model = CalibratedClassifierCV(model, method='isotonic', cv=tscv)
         calibrated_model.fit(X_train, y_train)
+        calibrated_cnf_matrix = metrics.confusion_matrix(y_test, calibrated_model.predict(X_test))
+        print("Calibrated confusion matrix:\n", calibrated_cnf_matrix)
 
         # 5) Train Random Forest for ensemble
         rf_model = RandomForestClassifier(
@@ -52,6 +56,8 @@ class MachineLearningModels:
             class_weight='balanced'
         )
         rf_model.fit(X_train, y_train)
+        rf_confusion_matrix = metrics.confusion_matrix(y_test, rf_model.predict(X_test))
+        print(f"Random forest classifier confusion matrix:\n{rf_confusion_matrix}")
 
         # 6) Evaluate models
         lr_preds = calibrated_model.predict_proba(X_test)[:, 1]

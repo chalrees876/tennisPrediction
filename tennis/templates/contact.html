@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Contact - Tennis Predictions{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 fw-bold mb-2">Contact & Support</h1>
+      <p class="mb-0 opacity-75">Get in touch with questions or feedback</p>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="player-card">
+      <div class="card-body">
+        <h2 class="h4 fw-semibold mb-4 text-tennis-dark">Send us a Message</h2>
+        
+        <form class="contact-form">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="name" class="form-label">Your Name</label>
+              <input type="text" class="form-control contact-input" id="name" placeholder="Enter your name">
+            </div>
+            <div class="col-md-6">
+              <label for="email" class="form-label">Email Address</label>
+              <input type="email" class="form-control contact-input" id="email" placeholder="Enter your email">
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control contact-input" id="subject" placeholder="What is this regarding?">
+          </div>
+          
+          <div class="mb-4">
+            <label for="message" class="form-label">Message</label>
+            <textarea class="form-control contact-input" id="message" rows="5" placeholder="Tell us more about your inquiry..."></textarea>
+          </div>
+          
+          <button type="submit" class="match-detail-btn btn-lg w-100">
+            Send Message
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="player-card mb-4">
+      <div class="card-body">
+        <h3 class="h5 fw-semibold mb-3 text-tennis-dark">Quick Help</h3>
+        
+        <div class="help-items">
+          <div class="help-item">
+            <div class="help-icon">❓</div>
+            <div class="help-content">
+              <h6 class="help-title">Prediction Questions</h6>
+              <p class="help-text">Understanding how our models work and interpret results</p>
+            </div>
+          </div>
+          
+          <div class="help-item">
+            <div class="help-icon">🐛</div>
+            <div class="help-content">
+              <h6 class="help-title">Bug Reports</h6>
+              <p class="help-text">Report issues with the website or data accuracy</p>
+            </div>
+          </div>
+          
+          <div class="help-item">
+            <div class="help-icon">💡</div>
+            <div class="help-content">
+              <h6 class="help-title">Feature Requests</h6>
+              <p class="help-text">Suggest new features or improvements</p>
+            </div>
+          </div>
+          
+          <div class="help-item">
+            <div class="help-icon">🔧</div>
+            <div class="help-content">
+              <h6 class="help-title">Technical Support</h6>
+              <p class="help-text">Help with website functionality or data access</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="player-card">
+      <div class="card-body text-center">
+        <h3 class="h5 fw-semibold mb-3 text-tennis-dark">Response Time</h3>
+        <div class="response-info">
+          <div class="response-time">24-48 hours</div>
+          <p class="response-note">We typically respond to all inquiries within 1-2 business days</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ Section -->
+<div class="player-card mt-4">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-4 text-tennis-dark">Frequently Asked Questions</h2>
+    
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-question">
+          <h5 class="mb-0">How often are predictions updated?</h5>
+        </div>
+        <div class="faq-answer">
+          <p>Predictions are updated daily as new match data becomes available. Upcoming matches are typically available 24-48 hours before match time.</p>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">
+          <h5 class="mb-0">What's the accuracy of your predictions?</h5>
+        </div>
+        <div class="faq-answer">
+          <p>Our ensemble model maintains approximately 65% accuracy on historical data. However, past performance doesn't guarantee future results, and tennis inherently involves uncertainty.</p>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">
+          <h5 class="mb-0">Can I use this data for betting?</h5>
+        </div>
+        <div class="faq-answer">
+          <p>This platform is for informational and educational purposes only. We provide data-driven insights, but users should exercise their own judgment and comply with local laws regarding sports betting.</p>
+        </div>
+      </div>
+      
+      <div class="faq-item">
+        <div class="faq-question">
+          <h5 class="mb-0">How can I contribute or report data issues?</h5>
+        </div>
+        <div class="faq-answer">
+          <p>We welcome feedback on data accuracy and feature suggestions. Please use the contact form above to report any issues or share ideas for improvement.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -9,7 +9,7 @@ from tennis.ml.TennisDataCollector import TennisDataCollector
 class Command(BaseCommand):
     def handle(self, *args, **options):
         start_time = datetime.datetime.now()
-        fe = TennisDataCollector(start_date="2010-01-01", end_date=datetime.date.today())
+        fe = TennisDataCollector(start_date="2018-01-01", end_date=datetime.date.today())
         match_features = fe.collect_training_data()
         df = pd.read_csv('tennis/data/training_data.csv')
         learn = MachineLearningModels(df).log_reg_train()
