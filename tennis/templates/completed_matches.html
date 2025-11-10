@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% block title %}Completed Tennis Matches{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 fw-bold mb-1">Completed Tennis Matches</h1>
+      <p class="mb-0 opacity-75">Predictions with AI-powered insights</p>
+    </div>
+  </div>
+</div>
+
+<div id="matches-container">
+  {% if matches %}
+    <div class="matches-count">
+      Showing {{ matches|length }} matches
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="matches-grid">
+      {% include 'matches_partial.html' %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🎾</div>
+      <h3 class="h5">No Completed Matches</h3>
+      <p class="text-muted">Check back later for completed match predictions!</p>
+    </div>
+  {% endif %}
+</div>
+
+{% if has_next %}
+<div class="load-more-container">
+  <button id="load-more-btn" class="load-more-btn" data-next-page="{{ next_page }}">
+    <span id="load-more-text">Load More Matches</span>
+    <div id="load-more-spinner" class="loading-spinner" style="display: none;"></div>
+  </button>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const loadMoreBtn = document.getElementById('load-more-btn');
+  const matchesGrid = document.getElementById('matches-grid');
+  const loadMoreText = document.getElementById('load-more-text');
+  const loadMoreSpinner = document.getElementById('load-more-spinner');
+
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', function() {
+      const nextPage = this.getAttribute('data-next-page');
+      if (!nextPage) return;
+
+      // Show loading state
+      loadMoreText.textContent = 'Loading...';
+      loadMoreSpinner.style.display = 'inline-block';
+      loadMoreBtn.disabled = true;
+
+      // Make AJAX request
+      fetch(`?page=${nextPage}`, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        // Append new matches
+        if (data.matches && data.matches.length > 0) {
+          // Create HTML for new matches
+          let newMatchesHTML = '';
+          data.matches.forEach(match => {
+            newMatchesHTML += createMatchCardHTML(match);
+          });
+
+          // Append to grid
+          matchesGrid.innerHTML += newMatchesHTML;
+
+          // Update matches count
+          const currentCount = document.querySelectorAll('.match-card').length;
+          document.querySelector('.matches-count').textContent = `Showing ${currentCount} matches`;
+        }
+
+        // Update load more button
+        if (data.has_next) {
+          loadMoreBtn.setAttribute('data-next-page', data.next_page);
+          loadMoreText.textContent = 'Load More Matches';
+          loadMoreBtn.disabled = false;
+        } else {
+          loadMoreBtn.style.display = 'none';
+        }
+      })
+      .catch(error => {
+        console.error('Error loading more matches:', error);
+        loadMoreText.textContent = 'Error - Try Again';
+        loadMoreBtn.disabled = false;
+      })
+      .finally(() => {
+        loadMoreSpinner.style.display = 'none';
+      });
+    });
+  }
+
+  function createMatchCardHTML(match) {
+  const winner = match.won ? match.player1_name : match.player2_name;
+  const predictedWinner = match.ens_prob >= 0.5 ? match.player1_name : match.player2_name;
+  const isCorrectPrediction = winner === predictedWinner;
+
+  return `
+    <div class="col">
+      <div class="card match-card h-100">
+        <div class="card-body">
+          <!-- Match header - CENTERED -->
+          <div class="match-header text-center mb-3">
+            <!-- Player names and VS badge -->
+            <div class="players-section mb-2">
+              ${match.won ? `
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <a class="player-link fs-5 fw-bold" href="/player/${match.player1_id}/">
+                    ${match.player1_name}
+                  </a>
+                </div>
+                <div class="d-flex align-items-center justify-content-center my-2">
+                  <span class="vs-badge fs-6">VS</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <a class="player-link fs-5 fw-bold" href="/player/${match.player2_id}/">
+                    ${match.player2_name}
+                  </a>
+                </div>
+              ` : `
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <a class="player-link fs-5 fw-bold" href="/player/${match.player2_id}/">
+                    ${match.player2_name}
+                  </a>
+                </div>
+                <div class="d-flex align-items-center justify-content-center my-2">
+                  <span class="vs-badge fs-6">VS</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                  <a class="player-link fs-5 fw-bold" href="/player/${match.player1_id}/">
+                    ${match.player1_name}
+                  </a>
+                </div>
+              `}
+            </div>
+
+            <!-- Match Score -->
+            <div class="match-score mb-2">
+              ${match.score || 'Score not available'}
+            </div>
+
+            <!-- Tournament Info -->
+            <div class="tournament-badge">
+              ${match.tournament} • ${match.date}
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <!-- Rest of the content remains the same -->
+          <div class="text-center">Predicted Winner</div>
+          ${isCorrectPrediction ? `
+            <div class="winner-prediction">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <span class="text-success">✓</span> ${predictedWinner}
+                </div>
+              </div>
+            </div>
+          ` : `
+            <div class="winner-prediction-wrong">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <span class="text-danger">x</span> ${predictedWinner}
+                </div>
+              </div>
+            </div>
+          `}
+
+          <!-- Confidence meter -->
+          <div class="d-flex justify-content-between small mb-1">
+            <span>Win Percentage</span>
+            <span class="fw-semibold">
+              ${match.ens_prob >= 0.5 ? match.p1_pct.toFixed(1) + '%' : match.p2_pct.toFixed(1) + '%'}
+            </span>
+          </div>
+          <div class="confidence-meter">
+            <div class="confidence-fill" style="width: ${match.ens_prob >= 0.5 ? match.p1_pct : match.p2_pct}%; background: linear-gradient(90deg,
+              ${getConfidenceColor(match.ens_prob >= 0.5 ? match.p1_pct : match.p2_pct)} 0%,
+              ${getConfidenceColor(match.ens_prob >= 0.5 ? match.p1_pct : match.p2_pct)} 100%);">
+            </div>
+          </div>
+          <div class="confidence-label">
+            <span>50% (Toss-up)</span>
+            <span>100% (Certain)</span>
+          </div>
+
+          <!-- Moneylines -->
+          <div class="moneyline-section">
+            <div class="moneyline-header">Moneyline (No-Vig)</div>
+            <div class="moneyline-row">
+              <div class="fw-medium">${match.player1_name}</div>
+              <div class="fw-bold">${match.ens_ml_p1.startsWith('-') ? match.ens_ml_p1 : '+' + match.ens_ml_p1}</div>
+            </div>
+            <div class="moneyline-row">
+              <div class="fw-medium">${match.player2_name}</div>
+              <div class="fw-bold">${match.ens_ml_p2.startsWith('-') ? match.ens_ml_p2 : '+' + match.ens_ml_p2}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+  function getConfidenceColor(percentage) {
+    if (percentage >= 75) return 'var(--tennis-green)';
+    if (percentage >= 60) return '#4CAF50';
+    if (percentage >= 55) return '#8BC34A';
+    if (percentage >= 52) return '#CDDC39';
+    return 'var(--tennis-orange)';
+  }
+});
+</script>
+
+{% endblock %}

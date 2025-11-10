@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% block title %}About - Tennis Predictions Project{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 fw-bold mb-2">About This Project</h1>
+      <p class="mb-0 opacity-75">Technical overview of the tennis predictions platform</p>
+    </div>
+  </div>
+</div>
+
+<!-- Project Overview -->
+<div class="player-card mb-4">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-3 text-tennis-dark">Project Overview</h2>
+    <p class="mb-4">
+      This tennis predictions platform is a full-stack web application that combines machine learning with modern web development 
+      to provide data-driven tennis match predictions. The system scrapes current tennis data, processes it through multiple 
+      machine learning models, and serves predictions through an interactive Django web interface.
+    </p>
+    
+    <div class="tech-stack">
+      <div class="tech-category">
+        <h5 class="tech-title">🧠 Machine Learning</h5>
+        <div class="tech-tags">
+          <span class="tech-tag">Scikit-learn</span>
+          <span class="tech-tag">Pandas</span>
+          <span class="tech-tag">NumPy</span>
+          <span class="tech-tag">Joblib</span>
+        </div>
+      </div>
+      
+      <div class="tech-category">
+        <h5 class="tech-title">🌐 Backend</h5>
+        <div class="tech-tags">
+          <span class="tech-tag">Django</span>
+          <span class="tech-tag">Python</span>
+          <span class="tech-tag">SQLite</span>
+          <span class="tech-tag">REST APIs</span>
+        </div>
+      </div>
+      
+      <div class="tech-category">
+        <h5 class="tech-title">🎨 Frontend</h5>
+        <div class="tech-tags">
+          <span class="tech-tag">HTML5</span>
+          <span class="tech-tag">CSS3</span>
+          <span class="tech-tag">JavaScript</span>
+          <span class="tech-tag">Bootstrap 5</span>
+        </div>
+      </div>
+      
+      <div class="tech-category">
+        <h5 class="tech-title">🛠️ DevOps</h5>
+        <div class="tech-tags">
+          <span class="tech-tag">AWS EC2</span>
+          <span class="tech-tag">Playwright</span>
+          <span class="tech-tag">Web Scraping</span>
+          <span class="tech-tag">Git</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Architecture -->
+<div class="player-card mb-4">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-3 text-tennis-dark">System Architecture</h2>
+    
+    <div class="architecture-flow">
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h6>Data Collection</h6>
+          <p>Automated web scraping using Playwright to collect match statistics, player rankings, and historical performance data from TennisAbstract</p>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h6>Feature Engineering</h6>
+          <p>Processing raw data into meaningful features including player form, surface performance, head-to-head records, and recent match statistics</p>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h6>Model Training</h6>
+          <p>Multiple ML models including Logistic Regression and Random Forest classifiers trained on historical match data with cross-validation</p>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h6>Prediction Serving</h6>
+          <p>Ensemble model combining predictions from multiple algorithms to generate win probabilities and convert to American moneyline odds</p>
+        </div>
+      </div>
+      
+      <div class="flow-step">
+        <div class="step-number">5</div>
+        <div class="step-content">
+          <h6>Web Interface</h6>
+          <p>Django-powered frontend with responsive design, real-time updates, and interactive match analysis features</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ML Models -->
+<div class="player-card mb-4">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-3 text-tennis-dark">Machine Learning Implementation</h2>
+    
+    <div class="model-cards">
+      <div class="model-card">
+        <div class="model-header">
+          <h5 class="model-title">Logistic Regression</h5>
+          <div class="model-type">Statistical Model</div>
+        </div>
+        <div class="model-body">
+          <p>Classical statistical approach that models the probability of match outcomes using a logistic function. Handles linear relationships well and provides interpretable coefficients.</p>
+          <div class="model-features">
+            <strong>Key Features:</strong> Player rankings, recent form, surface performance
+          </div>
+        </div>
+      </div>
+      
+      <div class="model-card">
+        <div class="model-header">
+          <h5 class="model-title">Random Forest</h5>
+          <div class="model-type">Ensemble Method</div>
+        </div>
+        <div class="model-body">
+          <p>Ensemble of decision trees that reduces overfitting and captures complex non-linear relationships. Robust to outliers and handles feature interactions effectively.</p>
+          <div class="model-features">
+            <strong>Key Features:</strong> All available features with feature importance analysis
+          </div>
+        </div>
+      </div>
+      
+      <div class="model-card">
+        <div class="model-header">
+          <h5 class="model-title">Ensemble Model</h5>
+          <div class="model-type">Meta-Learner</div>
+        </div>
+        <div class="model-body">
+          <p>Combines predictions from multiple models using weighted averaging. Leverages strengths of different algorithms while mitigating individual weaknesses.</p>
+          <div class="model-features">
+            <strong>Approach:</strong> Weighted average of Logistic Regression and Random Forest predictions
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Database Schema -->
+<div class="player-card mb-4">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-3 text-tennis-dark">Database Design</h2>
+    
+    <div class="schema-diagram">
+      <div class="schema-table">
+        <div class="table-header">Player</div>
+        <div class="table-fields">
+          <div class="field">id (PK)</div>
+          <div class="field">name</div>
+          <div class="field">ranking</div>
+          <div class="field">country</div>
+        </div>
+      </div>
+      
+      <div class="schema-relation">1 → ∞</div>
+      
+      <div class="schema-table">
+        <div class="table-header">PlayerMatch</div>
+        <div class="table-fields">
+          <div class="field">id (PK)</div>
+          <div class="field">player_id (FK)</div>
+          <div class="field">opponent_id (FK)</div>
+          <div class="field">tournament_id (FK)</div>
+          <div class="field">date</div>
+          <div class="field">surface</div>
+          <div class="field">round</div>
+          <div class="field">score</div>
+          <div class="field">won</div>
+        </div>
+      </div>
+      
+      <div class="schema-relation">1 → 1</div>
+      
+      <div class="schema-table">
+        <div class="table-header">PlayerMatchServeStats</div>
+        <div class="table-fields">
+          <div class="field">match_id (FK)</div>
+          <div class="field">ace_pctg</div>
+          <div class="field">df_pctg</div>
+          <div class="field">fs_pctg</div>
+          <div class="field">fs_w_pctg</div>
+          <div class="field">ss_w_pctg</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Performance -->
+<div class="player-card">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-3 text-tennis-dark">Performance & Optimization</h2>
+    
+    <div class="performance-grid">
+      <div class="performance-metric">
+        <div class="metric-value">~65%</div>
+        <div class="metric-label">Prediction Accuracy</div>
+      </div>
+      
+      <div class="performance-metric">
+        <div class="metric-value">&lt;2s</div>
+        <div class="metric-label">Page Load Time</div>
+      </div>
+      
+      <div class="performance-metric">
+        <div class="metric-value">500+</div>
+        <div class="metric-label">Players Tracked</div>
+      </div>
+      
+      <div class="performance-metric">
+        <div class="metric-value">10000+</div>
+        <div class="metric-label">Matches Analyzed</div>
+      </div>
+    </div>
+    
+    <div class="optimization-list">
+      <h6 class="mb-3">Key Optimizations:</h6>
+      <ul>
+        <li><strong>Lazy Loading:</strong> Implemented pagination and AJAX loading for match data</li>
+        <li><strong>Caching:</strong> Static file caching and database query optimization</li>
+        <li><strong>Responsive Design:</strong> Mobile-first CSS with optimized asset delivery</li>
+        <li><strong>Efficient Scraping:</strong> Rate-limited concurrent requests with error handling</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,142 +1,107 @@
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import datetime
 from pprint import pprint
 
 from django.core.management import BaseCommand
-from django.db import transaction, IntegrityError, connections
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
+from django.db import transaction
+from django.db.models import Q
+from playwright.sync_api import sync_playwright
 
 from tennis.models import Player, PlayerMatch, Tournament, PlayerMatchServeStats, PlayerMatchReturnStats
 
-def _is_blank(x):
-    return x is None or str(x).strip() in {"", "—", "-", "NA", "N/A"}
-
-
-def to_int(x):
-    try:
-        return int(x) if not _is_blank(x) else None
-    except (TypeError, ValueError):
-        return None
-
-
-def to_float(x):
-    try:
-        return float(x) if not _is_blank(x) else None
-    except (TypeError, ValueError):
-        return None
-
-
-def pctg_to_dec_safe(x):
-    if _is_blank(x):
-        return None
-    try:
-        return float(str(x).replace("%", "").strip()) / 100.0
-    except ValueError:
-        return None
-
-
-def parse_date_dd_mmm_yyyy(s):
-    if _is_blank(s):
-        return None
-    clean = re.sub(r"[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]", "-", str(s).strip())
-    return datetime.strptime(clean, "%d-%b-%Y").date()
-
-
-def parse_time_hms(s):
-    """Return timedelta or None for strings like '1:35' or '2:05:12'."""
-    if _is_blank(s):
-        return None
-    parts = [p for p in str(s).split(":") if p != ""]
-    try:
-        if len(parts) == 2:
-            m, sec = map(int, parts)
-            return timedelta(minutes=m, seconds=sec)
-        elif len(parts) == 3:
-            h, m, sec = map(int, parts)
-            return timedelta(hours=h, minutes=m, seconds=sec)
-    except ValueError:
-        return None
-    return None
-
-
-RANGES = [(1, 100), (101, 200), (201, 300), (301, 500)]
 
 class Command(BaseCommand):
-    help = "Imports players recent matches along with serve and return stats."
+    help = "Import players recent matches"
+    """
+    Splits stats into 3 django models.
+    PlayerMatches (holds basic match data like who where and when),
+    PlayerMatchServeStats (holds service stats for specified player),
+    and PlayerMatchReturnStats (holds return stats for specified player).
+    """
+
+    def add_arguments(self, parser):
+        parser.add_argument("--min-rank", type=int, default=1)
+        parser.add_argument("--max-rank", type=int, default=500)
 
     def handle(self, *args, **options):
-        with ThreadPoolExecutor(max_workers=4) as ex:
-            futures = [ex.submit(self.process_range, lo, hi) for lo, hi in RANGES]
-            for f in as_completed(futures):
-                # Surface any exceptions that occurred in threads
-                f.result()
 
-        self.stdout.write(self.style.SUCCESS("Finished importing for all ranges."))
+        min_rank = options["min_rank"]
+        max_rank = options["max_rank"]
 
-    def process_range(self, lo, hi):
-        """Run the existing import loop for one rank range."""
-        # Make sure each thread owns a fresh DB connection
-        connections.close_all()
-        players = Player.objects.filter(ranking__gte=lo, ranking__lte=hi).only("id", "name", "ranking")
-        self.stdout.write(self.style.NOTICE(f"Processing ranks {lo}-{hi} ({players.count()} players)"))
-
-        for player in players.iterator(chunk_size=50):
-            self.process_player(player)
-
-        connections.close_all()
-
-    def process_player(self, player):
-        """Your current per-player logic goes here (slightly tidied)."""
-        self.stdout.write(f"Importing recent matches for {player.name} (rank {player.ranking})")
-        results = self.get_results(player)
-        for row in results:
-            row['Completed'] = not (row.get('Score') == 'Live Scores' or not row.get('Score', '').strip())
-            with transaction.atomic():
-                try:
-                    tournament, _ = Tournament.objects.get_or_create(
-                        name=row['Tournament'],
-                        year=int(str(row['Date'])[-4:]) if row.get('Date') else None
-                    )
-
-                    # Opponent get_or_create can race across threads; retry once if needed.
-                    for _try in range(2):
+        try:
+            players = Player.objects.filter(ranking__lte=max_rank, ranking__gt=min_rank)
+        except Player.DoesNotExist:
+            self.stdout.write("Player not found")
+        player_count = 0
+        for player in players:
+            try:
+                self.stdout.write(f"Importing recent matches for {player.name}")
+                self.stdout.write(f"Ranking: {player.ranking}")
+                results = self.get_results(player)
+                for row in results:
+                    if row['Score'] == 'Live Scores' or not row['Score'].strip():
+                        row['Completed'] = False
+                        row['Won'] = None
+                    else:
+                        row['Completed'] = True
+                    with transaction.atomic():
                         try:
-                            opponent, _ = Player.objects.get_or_create(name=row['Opponent'])
-                            break
-                        except IntegrityError:
-                            connections.close_all()
-                            continue
+                            tournament, tournament_created = Tournament.objects.get_or_create(name=row['Tournament'], year=row['Date'][-4:])
+                            tournament_action = 'created' if tournament_created else 'got'
 
-                    match, created = PlayerMatch.objects.update_or_create(
-                        player=player,
-                        opponent=opponent,
-                        tournament=tournament,
-                        defaults=self.player_match_defaults(row)
-                    )
-                    self.stdout.write(self.style.SUCCESS(
-                        f'{"created" if created else "updated"} {match.player.name} v {match.opponent.name} @ {match.tournament.name}'
-                    ))
+                            self.stdout.write(
+                                self.style.SUCCESS(f'{tournament_action} {tournament.name}')
+                            )
 
-                    serve_stats, s_created = PlayerMatchServeStats.objects.update_or_create(
-                        match=match,
-                        defaults=self.serve_stats_defaults(row)
-                    )
-                    return_stats, r_created = PlayerMatchReturnStats.objects.update_or_create(
-                        match=match,
-                        defaults=self.return_stats_defaults(row)
-                    )
+                            opponent, opponent_created = Player.objects.get_or_create(name=row['Opponent'])
+                            opponent_action = 'created' if opponent_created else 'got'
 
-                    # If you actually have point-by-point data:
-                    # PlayerPointByPointStats.objects.update_or_create(
-                    #     match=match,
-                    #     defaults=self.point_by_point_stats_defaults(row)
-                    # )
+                            self.stdout.write(
+                                self.style.SUCCESS(f'{opponent_action} {opponent.name}')
+                            )
 
-                except Exception as e:
-                    self.stdout.write(self.style.ERROR(f"Error for {player.name}: {e}"))
+                            match, match_created = PlayerMatch.objects.update_or_create(
+                                player=player,
+                                opponent=opponent,
+                                tournament=tournament,
+                                date= self.parse_date(row['Date']),
+                                round=row['Rd'],
+                                defaults=self.player_match_defaults(row, opponent))
+
+                            match_action = 'created' if match_created else 'update'
+
+                            self.stdout.write(
+                                self.style.SUCCESS(f'{match_action} {match.player.name} v {match.opponent.name} at {match.tournament.name}')
+                            )
+
+                            serve_stats, serve_stats_created = PlayerMatchServeStats.objects.update_or_create(match=match,
+                            defaults=self.serve_stats_defaults(row)
+                            )
+
+                            match_stats_action = 'created' if serve_stats_created else 'update'
+
+                            self.stdout.write(
+                                self.style.SUCCESS(
+                                    f'{match_stats_action} stats for {match.player.name} v {match.opponent.name} at {match.tournament.name}')
+                            )
+
+                            return_stats, return_stats_created = PlayerMatchReturnStats.objects.update_or_create(match=match,
+                            defaults=self.return_stats_defaults(row)
+                            )
+
+                            return_stats_action = 'created' if return_stats_created else 'update'
+
+                            self.stdout.write(
+                                self.style.SUCCESS(
+                                    f'created {match}')
+                            )
+                            player_count += 1
+                        except Exception as e:
+                            self.stdout.write(
+                                self.style.ERROR(f'Error {e}')
+                            )
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'Error processing player {player.name}: {e}'))
 
     def get_results(self, player):
         try:
@@ -144,156 +109,193 @@ class Command(BaseCommand):
             return_results = self.get_recent_return_results(player)
 
             results = [{**d1, **d2} for d1, d2 in zip(serve_results, return_results)]
-            pprint(results)
-
             return results
         except Exception as e:
             print(f"{e}")
             return []
 
-    @staticmethod
-    def get_recent_serve_results(player):
-        # Set up Chrome options
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Block images for faster loading
-        chrome_options.add_experimental_option("prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Disable images
-        })
+    def get_recent_serve_results(self, player):
+        url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}"
 
-        # Initialize driver
-        driver = webdriver.Chrome(options=chrome_options)
-        try:
-            driver.get(f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}")
+        def parse_serve_page(page):
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_selector("#matches", timeout=10000)
 
-            table = driver.find_element(By.ID, "matches")
+                table = page.query_selector("#matches")
 
-            header_data = table.find_elements(By.TAG_NAME, "th")
-            headers = []
+                header_elements = table.query_selector_all("th")
+                headers = []
 
-            for header in header_data:
-                if not header.text.strip():
-                    headers.append("Opponent")
-                else:
-                    headers.append(header.text.strip())
-            headers.append("Won")
-
-            rows = table.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
-            total_data = []
-            for row in rows:
-                cell_data = row.find_elements(By.TAG_NAME, "td")
-                cell_text = []
-                for i, cell in enumerate(cell_data):
-                    if i == 6:
-
-                        # The opponent is in <a> tag
-                        opponent_link = cell.find_element(By.TAG_NAME, "a")
-                        opponent = opponent_link.text.strip()
-
-                        # Get full text to determine who won
-                        full_text = cell.text
-
-                        # Check if current player is the winner (opponent appears after "d." in the text)
-                        if full_text.find(opponent) < full_text.find(" d. "):
-                            # Current player is the winner
-                            won = False
-                        else:
-                            won = True
-                        cell_text.append(opponent)
-                    elif i == 16:
-                        cell_text.append(cell.text)
-                        cell_text.append(won)
+                for header in header_elements:
+                    text = header.inner_text().strip()
+                    if not text:
+                        headers.append("Opponent")
                     else:
-                        cell_text.append(cell.text)
-                cell_dict = dict(zip(headers, cell_text))
-                cell_dict['Player'] = player.name
-                total_data.append(cell_dict)
-            driver.close()
-        except Exception as e:
-            print(e)
+                        headers.append(text)
+                headers.append("Won")
 
-        return total_data
+                rows = table.query_selector("tbody").query_selector_all("tr")
+                total_data = []
+                for row in rows:
+                    cell_data = row.query_selector_all("td")
+                    cell_text = []
+                    for i, cell in enumerate(cell_data):
+                        if i == 6:
+                            # The opponent is in <a> tag
+                            opponent_link = cell.query_selector("a")
+                            opponent = opponent_link.inner_text().strip()
+
+                            # Get full text to determine who won
+                            full_text = cell.inner_text()
+                            # Check if current player is the winner (opponent appears after "d." in the text)
+                            if full_text.find(opponent) < full_text.find(" d. "):
+                                # Current player is the winner
+                                won = False
+                            else:
+                                won = True
+                            cell_text.append(opponent)
+                        elif i == 16:
+                            cell_text.append(cell.inner_text())
+                            cell_text.append(won)
+                        else:
+                            cell_text.append(cell.inner_text())
+                    cell_dict = dict(zip(headers, cell_text))
+                    cell_dict['Player'] = player.name
+                    total_data.append(cell_dict)
+                return total_data
+            except Exception as e:
+                print(f"Error in serve results: {e}")
+                return []
+
+        return self._with_page(url, parse_serve_page)
+
+    def get_recent_return_results(self, player):
+        url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}&f=r1"
+
+        def parse_return_page(page):
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_selector("#matches", timeout=10000)
+
+                table = page.query_selector("#matches")
+
+                header_elements = table.query_selector_all("th")
+                headers = []
+
+                for header in header_elements:
+                    text = header.inner_text().strip()
+                    if not text:
+                        headers.append("Opponent")
+                    else:
+                        headers.append(text)
+
+                headers = [header.inner_text().strip() for header in header_elements]
+                rows = table.query_selector("tbody").query_selector_all("tr")
+                total_data = []
+                for row in rows:
+                    cell_data = row.query_selector_all("td")
+                    cell_text = []
+                    for i, cell in enumerate(cell_data):
+                        cell_text.append(cell.inner_text())
+                    cell_dict = dict(zip(headers, cell_text))
+                    cell_dict['Player'] = player.name
+                    total_data.append(cell_dict)
+                return total_data
+            except Exception as e:
+                print(f"Error in return results: {e}")
+                return []
+
+        return self._with_page(url, parse_return_page)
+
+    def _with_page(self, url, fn):
+        """Helper function to manage Playwright browser context"""
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--disable-dev-shm-usage","--no-sandbox"])
+            context = browser.new_context(
+                user_agent=("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+                viewport={"width": 1280, "height": 900},
+                java_script_enabled=True,
+            )
+            context.set_default_timeout(30_000)
+            page = context.new_page()
+            # Block images for speed
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type == "image" else route.continue_())
+            try:
+                return fn(page)
+            finally:
+                try:
+                    page.close()
+                except Exception:
+                    pass
+                try:
+                    context.close()
+                except Exception:
+                    pass
+                try:
+                    browser.close()
+                except Exception:
+                    pass
 
     @staticmethod
-    def get_recent_return_results(player):
-        # Set up Chrome options
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Block images for faster loading
-        chrome_options.add_experimental_option("prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Disable images
-        })
-
-        # Initialize driver
-        driver = webdriver.Chrome(options=chrome_options)
-        try:
-            driver.get(f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player.name.replace(' ', '')}&f=r1")
-
-            table = driver.find_element(By.ID, "matches")
-
-            header_data = table.find_elements(By.TAG_NAME, "th")
-            headers = [header.text.strip() for header in header_data]
-            rows = table.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
-            total_data = []
-            for row in rows:
-                cell_data = row.find_elements(By.TAG_NAME, "td")
-                cell_text = []
-                for i, cell in enumerate(cell_data):
-                    cell_text.append(cell.text)
-                cell_dict = dict(zip(headers, cell_text))
-                cell_dict['Player'] = player.name
-                total_data.append(cell_dict)
-            driver.close()
-        except Exception as e:
-            print(e)
-
-        return total_data
+    def pctg_to_dec(pctg):
+        return float(pctg.replace("%", "")) / 100
 
     @staticmethod
-    def player_match_defaults(row):
+    def parse_date(date_str):
+        clean_date = re.sub(r"[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]", "-", date_str.strip())
+        parsed_date = datetime.strptime(clean_date, "%d-%b-%Y").date()
+        return parsed_date
+
+    @staticmethod
+    def player_match_defaults(row, opponent):
         return {
-            'completed': bool(row.get('Completed')),
-            'date': parse_date_dd_mmm_yyyy(row.get('Date')),
-            'surface': row.get('Surface') or None,
-            'round': row.get('Rd') or None,
-            'rank': to_int(row.get('Rk')),
-            'opponent_rank': to_int(row.get('vRk')),
-            'score': row.get('Score') or None,
-            'won': bool(row.get('Won')),
+            'completed': row['Completed'],
+            'surface': row['Surface'],
+            'rank': row['Rk'],
+            'opponent_rank': row['vRk'],
+            'opponent': opponent,
+            'score': row['Score'],
+            'won': row['Won']
         }
 
-    @staticmethod
-    def serve_stats_defaults(row):
+    def serve_stats_defaults(self, row):
+        # Handle break points saved (format: "saved/faced")
+        bp_saved, bp_faced = None, None
+        if row.get('BPSvd'):
+            bp_parts = (row.get('BPSvd') or '').split('/')
+            if len(bp_parts) == 2:
+                bp_saved = int(bp_parts[0])
+                bp_faced = int(bp_parts[1])
+
         return {
-            'dominance_ratio': to_float(row.get('DR')),
-            'ace_pctg': pctg_to_dec_safe(row.get('A%')),
-            'df_pctg': pctg_to_dec_safe(row.get('DF%')),
-            'fs_pctg': pctg_to_dec_safe(row.get('1stIn')),
-            'fs_w_pctg': pctg_to_dec_safe(row.get('1st%')),
-            'ss_w_pctg': pctg_to_dec_safe(row.get('2nd%')),
-            'bp_saved': to_int(row['BPSvd'].split('/')[0]) if row.get('BPSvd') else None,
-            'bp_faced': to_int(row['BPSvd'].split('/')[1]) if row.get('BPSvd') else None,
-            'time': parse_time_hms(row.get('Time')),
+            'dominance_ratio': row['DR'],
+            'ace_pctg': self.pctg_to_dec(row['A%']),
+            'df_pctg': self.pctg_to_dec(row['DF%']),
+            'fs_pctg': self.pctg_to_dec(row['1stIn']),
+            'fs_w_pctg': self.pctg_to_dec(row['1st%']),
+            'ss_w_pctg': self.pctg_to_dec(row['2nd%']),
+            'bp_saved': bp_saved,
+            'bp_faced': bp_faced,
+            'time': row['Time']
         }
 
-    @staticmethod
-    def return_stats_defaults(row):
+    def return_stats_defaults(self, row):
+        bp_conv, bp_chances = None, None
+        if row.get('BPCnv'):
+            bp_parts = (row.get('BPCnv') or '').split('/')
+            if len(bp_parts) == 2:
+                bp_conv = int(bp_parts[0])
+                bp_chances = int(bp_parts[1])
         return {
-            'dominance_ratio': to_float(row.get('DR')),
-            'total_p_w': pctg_to_dec_safe(row.get('TPW')),
-            'return_p_w': pctg_to_dec_safe(row.get('RPW')),
-            'v_ace_pctg': pctg_to_dec_safe(row.get('vA%')),
-            'v_fs_pctg': pctg_to_dec_safe(row.get('v1st%')),
-            'v_ss_pctg': pctg_to_dec_safe(row.get('v2nd%')),
-            'bp_conv': to_int(row['BPCnv'].split('/')[0]) if row.get('BPCnv') else None,
-            'bp_chances': to_int(row['BPCnv'].split('/')[1]) if row.get('BPCnv') else None,
-            'time': parse_time_hms(row.get('Time')),
+            'dominance_ratio': row['DR'],
+            'total_p_w': self.pctg_to_dec(row['TPW']),
+            'return_p_w': self.pctg_to_dec(row['RPW']),
+            'v_ace_pctg': self.pctg_to_dec(row['vA%']),
+            'v_fs_pctg': self.pctg_to_dec(row['v1st%']),
+            'v_ss_pctg': self.pctg_to_dec(row['v2nd%']),
+            'bp_conv': bp_conv,
+            'bp_chances': bp_chances,
+            'time': row['Time']
         }

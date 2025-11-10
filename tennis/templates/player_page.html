@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}{{ player.name }} — Player Profile{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 fw-bold mb-2">{{ player.name }}</h1>
+      <div class="d-flex align-items-center gap-3">
+        <div class="rank-badge">
+          World Rank: #{{ player.ranking }}
+        </div>
+        {% if player.country %}
+        <div style="color: rgba(255,255,255,0.9); font-size: 0.95rem;">
+          {{ player.country }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Recent Matches Section -->
+<div class="player-card">
+  <div class="card-body">
+    <h5 class="fw-semibold mb-3 text-tennis-dark">Recent Results</h5>
+
+    {% if recent_matches %}
+      <div class="matches-table">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Opponent</th>
+                <th>Surface</th>
+                <th>Result</th>
+                <th>Score</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in recent_matches %}
+                <tr>
+                  <td>
+                    <span style="font-weight: 500; color: var(--tennis-dark);">
+                      {{ m.date|date:"M d, Y" }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if m.opponent %}
+                      <a class="player-link" href="{% url 'tennis:player_page' m.opponent.id %}">
+                        {{ m.opponent.name }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted">Unknown</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if m.surface %}
+                      <span class="surface-badge">{{ m.surface }}</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if m.won == True %}
+                      <span class="win-badge">WIN</span>
+                    {% else %}
+                      <span class="loss-badge">LOSS</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span style="font-family: 'Courier New', monospace; font-weight: 600; color: var(--tennis-dark);">
+                      {{ m.score|default:"-" }}
+                    </span>
+                  </td>
+                  <td>
+                    <a href="{% url 'tennis:match_page' m.id %}" class="match-detail-btn">
+                      View
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">🎾</div>
+        <h5 class="h6">No Recent Matches</h5>
+        <p class="text-muted mb-0">No match data available for this player.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -5,7 +5,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 import joblib
-
+import math
 from tennis.ml.feature_engineering import TennisFeatureEngineer
 from tennis.models import PlayerMatch
 
@@ -17,43 +17,50 @@ class TennisDataCollector:
         self.feature_engineer = TennisFeatureEngineer()
 
     def collect_training_data(self):
-        """Collect matches with features and outcomes for training"""
         training_data = []
+        qs = (PlayerMatch.objects
+              .filter(date__range=[self.start_date, self.end_date], completed=True)
+              .select_related('player','opponent')
+              .order_by('date'))
 
-        # Get all matches in the date range
-        matches = PlayerMatch.objects.filter(
-            date__range=[self.start_date, self.end_date]
-        ).select_related('player', 'opponent')
+        # keep one perspective per real match if your table is per-player
+        matches = [m for m in qs if m.player.id < m.opponent.id]
 
         for match in matches:
             try:
-                # Create features for this match
-                match_features = self.feature_engineer.create_match_features(match)
+                feats = self.feature_engineer.create_match_features(match, include_adjusted=False)
+                if not feats:  # skipped due to sparse history, errors, etc.
+                    continue
+                if match.won is None:
+                    continue
 
-                if match_features:
-                    # Add target variable (1 if player1 won, 0 if lost)
-                    match_features['target'] = 1 if match.won else 0
+                feats['target'] = 1 if match.won else 0
+                feats['match_id'] = match.id
+                feats['date'] = match.date
+                feats['player_id'] = match.player.id  # stable id
+                feats['opponent_id'] = match.opponent.id
 
-                    # Add match metadata for tracking
-                    match_features['match_id'] = match.id
-                    match_features['date'] = match.date
-                    match_features['player_id'] = match.player.name
-                    match_features['opponent_id'] = match.opponent.name
+                if self._all_zero_features(feats):
+                    continue
 
-                    training_data.append(match_features)
+                training_data.append(feats)
 
             except Exception as e:
-                print(f"Error processing match {match.id}: {e}")
+                print(f"Error processing match {getattr(match,'id',None)}: {e}")
                 continue
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
-        pd.set_option('display.width', 2000)
-        pd.set_option('display.float_format', '{:20,.2f}'.format)
-        pd.set_option('display.max_colwidth', None)
-        pd.reset_option('display.max_rows')
-        pd.reset_option('display.max_columns')
-        pd.reset_option('display.width')
-        pd.reset_option('display.float_format')
-        pd.reset_option('display.max_colwidth')
+
         df = pd.DataFrame(training_data)
         df.to_csv("tennis/data/training_data.csv", index=False)
+        return df
+
+    @staticmethod
+    def _all_zero_features(d: dict, non_feature_keys=None) -> bool:
+        non_feature_keys = non_feature_keys or {"target", "match_id", "date", "player_id", "opponent_id"}
+        vals = []
+        for k, v in d.items():
+            if k in non_feature_keys:
+                continue
+            if v is None or (isinstance(v, float) and math.isnan(v)):
+                v = 0.0
+            vals.append(abs(float(v)) <= 1e-12)
+        return all(vals)

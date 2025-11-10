@@ -110,45 +110,55 @@ class Tournament(models.Model):
         return f"{self.name}"
 
 class PlayerMatch(models.Model):
-    date = models.DateField(default=None)
-    player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player")
+    date = models.DateField(null=False)
+    player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player", null=False)
     tournament = ForeignKey(Tournament, on_delete=models.CASCADE)
     surface = models.CharField(max_length=20, default="Not Specified")
-    round = models.CharField(max_length=50)
+    round = models.CharField(max_length=50, null=False, blank=False)
     rank = models.IntegerField()
     opponent_rank = models.IntegerField()
-    opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent")
+    opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent", null=False)
     score = models.CharField(max_length=50)
-    won = models.BooleanField(default=None)
+    won = models.BooleanField(default=None, null=True)
     completed = models.BooleanField(blank=True, null=True)
 
+    class Meta:
+        unique_together = ("player", "opponent", "round", "tournament", "date")
+
     def __str__(self):
-        return f"{self.player.name} v {self.opponent.name} - {self.tournament} {self.date}"
+        if self.completed:
+            if self.won:
+                return f"{self.player} d. {self.opponent} - {self.score} @ {self.tournament}"
+            else:
+                return f"{self.opponent} d. {self.player} - {self.score} @ {self.tournament}"
+
+        else:
+            return f"{self.player} vs. {self.opponent} - {self.score} @ {self.tournament}"
 
 
 class PlayerMatchServeStats(models.Model):
     match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
-    dominance_ratio = models.FloatField()
-    ace_pctg = models.FloatField()
-    df_pctg = models.FloatField()
-    fs_pctg = models.FloatField()
-    fs_w_pctg = models.FloatField()
-    ss_w_pctg = models.FloatField()
-    bp_saved = models.IntegerField()
-    bp_faced = models.IntegerField()
-    time = models.CharField(max_length=50)
+    dominance_ratio = models.FloatField(null=True, default=-1)
+    ace_pctg = models.FloatField(null=True, default=-1)
+    df_pctg = models.FloatField(null=True, default=-1)
+    fs_pctg = models.FloatField(null=True, default=-1)
+    fs_w_pctg = models.FloatField(null=True, default=-1)
+    ss_w_pctg = models.FloatField(null=True, default=-1)
+    bp_saved = models.IntegerField(null=True, default=-1)
+    bp_faced = models.IntegerField(null=True, default=-1)
+    time = models.CharField(max_length=50, null=True)
 
 class PlayerMatchReturnStats(models.Model):
     match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
-    dominance_ratio = models.FloatField()
-    total_p_w = models.FloatField()
-    return_p_w = models.FloatField()
-    v_ace_pctg = models.FloatField()
-    v_fs_pctg = models.FloatField()
-    v_ss_pctg = models.FloatField()
-    bp_conv = models.IntegerField()
-    bp_chances = models.IntegerField()
-    time = models.CharField(max_length=50)
+    dominance_ratio = models.FloatField(null=True, default=-1)
+    total_p_w = models.FloatField(null=True, default=-1)
+    return_p_w = models.FloatField(null=True, default=-1)
+    v_ace_pctg = models.FloatField(null=True, default=-1)
+    v_fs_pctg = models.FloatField(null=True, default=-1)
+    v_ss_pctg = models.FloatField(null=True, default=-1)
+    bp_conv = models.IntegerField(null=True, default=-1)
+    bp_chances = models.IntegerField(null=True, default=-1)
+    time = models.CharField(max_length=50, null=True, default="")
 
 class PlayerMatchKeyGames(models.Model):
     match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
@@ -176,7 +186,7 @@ class PlayerPointByPointStats(models.Model):
     deuce_r_w_pctg = models.FloatField()
     ad_r_w_pctg = models.FloatField()
 
-class MatchForm(forms.Form):
+"""class MatchForm(forms.Form):
     player = forms.ModelChoiceField(
         queryset=Player.objects.all(),
         widget=forms.Select(attrs={'id': 'player_select'})
@@ -188,6 +198,6 @@ class MatchForm(forms.Form):
         if self.is_bound:
             raw = self.data.get(self.add_prefix("player")) or self.data.get("player")
             if raw:
-                self.fields["player"].queryset = Player.objects.filter(pk=raw)
+                self.fields["player"].queryset = Player.objects.filter(pk=raw)"""
 
 

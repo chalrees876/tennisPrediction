@@ -1,3 +1,5 @@
+  GNU nano 7.2                                                  requirements.txt                                                           
+python-dotenv
 joblib
 selenium
 Django
@@ -8,6 +10,10 @@ matplotlib>=3.7
 seaborn>=0.12
 natsort>=8.4
 psycopg
-pyspark==3.3.2
-pyarrow==12.0.1
 boto3>=1.28
+
+
+
+
+
+

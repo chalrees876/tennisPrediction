@@ -1,0 +1,410 @@
+{% extends 'base.html' %}
+{% block title %}Match: {{ match.player.name }} vs {{ match.opponent.name }} - Tennis Predictions{% endblock %}
+{% block content %}
+
+{% load math_filters %}
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 fw-bold mb-2">{{ match.player.name }} vs {{ match.opponent.name }}</h1>
+      <div class="d-flex align-items-center gap-3">
+        <div class="match-tournament-badge">
+          {{ match.tournament.name }} • {{ match.date|date:"M d, Y" }}
+        </div>
+        <div class="match-surface-badge">
+          {{ match.surface }}
+        </div>
+        {% if match.completed %}
+          {% if match.won %}
+            <div class="match-result-badge win">
+              {{ match.player.name }} won
+            </div>
+          {% else %}
+            <div class="match-result-badge loss">
+              {{ match.opponent.name }} won
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="match-result-badge upcoming">
+            Upcoming Match
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Match Score Section -->
+{% if match.completed and match.score %}
+<div class="player-card mb-4">
+  <div class="card-body text-center">
+    <h5 class="fw-semibold mb-3 text-tennis-dark">Final Score</h5>
+    <div class="match-score-display">
+      {{ match.score }}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Player vs Opponent Stats -->
+<div class="row">
+  <!-- Player Stats Column -->
+  <div class="col-md-6">
+    <div class="player-card h-100">
+      <div class="card-body text-center">
+        <h5 class="fw-semibold mb-3 text-tennis-dark">
+          <a href="{% url 'tennis:player_page' match.player.id %}" class="player-link">
+            {{ match.player.name }}
+          </a>
+        </h5>
+        {% if match.player.ranking %}
+          <div class="rank-badge mb-3">World Rank: #{{ match.player.ranking }}</div>
+        {% endif %}
+
+        <!-- Serve Stats -->
+        <h6 class="fw-semibold mb-3 text-tennis-green">Serve Statistics</h6>
+        {% for serve_stat in player_serve_stats %}
+          <div class="stat-row">
+            <div class="stat-label">Aces %</div>
+            <div class="stat-value">
+              {% if serve_stat.ace_pctg and serve_stat.ace_pctg >= 0 %}
+                {{ serve_stat.ace_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Double Faults %</div>
+            <div class="stat-value">
+              {% if serve_stat.df_pctg and serve_stat.df_pctg >= 0 %}
+                {{ serve_stat.df_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">1st Serve %</div>
+            <div class="stat-value">
+              {% if serve_stat.fs_pctg and serve_stat.fs_pctg >= 0 %}
+                {{ serve_stat.fs_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">1st Serve Points Won %</div>
+            <div class="stat-value">
+              {% if serve_stat.fs_w_pctg and serve_stat.fs_w_pctg >= 0 %}
+                {{ serve_stat.fs_w_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">2nd Serve Points Won %</div>
+            <div class="stat-value">
+              {% if serve_stat.ss_w_pctg and serve_stat.ss_w_pctg >= 0 %}
+                {{ serve_stat.ss_w_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Break Points Saved</div>
+            <div class="stat-value">
+              {% if serve_stat.bp_saved >= 0 and serve_stat.bp_faced >= 0 %}
+                {{ serve_stat.bp_saved }}/{{ serve_stat.bp_faced }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Dominance Ratio</div>
+            <div class="stat-value">
+              {% if serve_stat.dominance_ratio and serve_stat.dominance_ratio >= 0 %}
+                {{ serve_stat.dominance_ratio|floatformat:2 }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-muted">No serve statistics available</div>
+        {% endfor %}
+
+        <!-- Return Stats -->
+        <h6 class="fw-semibold mb-3 text-tennis-green mt-4">Return Statistics</h6>
+        {% for return_stat in player_return_stats %}
+          <div class="stat-row">
+            <div class="stat-label">Return Points Won %</div>
+            <div class="stat-value">
+              {% if return_stat.return_p_w and return_stat.return_p_w >= 0 %}
+                {{ return_stat.return_p_w|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Total Points Won %</div>
+            <div class="stat-value">
+              {% if return_stat.total_p_w and return_stat.total_p_w >= 0 %}
+                {{ return_stat.total_p_w|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Faced Aces %</div>
+            <div class="stat-value">
+              {% if return_stat.v_ace_pctg and return_stat.v_ace_pctg >= 0 %}
+                {{ return_stat.v_ace_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">1st Serve Return Won %</div>
+            <div class="stat-value">
+              {% if return_stat.v_fs_pctg and return_stat.v_fs_pctg >= 0 %}
+                {{ return_stat.v_fs_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">2nd Serve Return Won %</div>
+            <div class="stat-value">
+              {% if return_stat.v_ss_pctg and return_stat.v_ss_pctg >= 0 %}
+                {{ return_stat.v_ss_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Break Points Converted</div>
+            <div class="stat-value">
+              {% if return_stat.bp_conv >= 0 and return_stat.bp_chances >= 0 %}
+                {{ return_stat.bp_conv }}/{{ return_stat.bp_chances }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Dominance Ratio</div>
+            <div class="stat-value">
+              {% if return_stat.dominance_ratio and return_stat.dominance_ratio >= 0 %}
+                {{ return_stat.dominance_ratio|floatformat:2 }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-muted">No return statistics available</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Opponent Stats Column -->
+  <div class="col-md-6">
+    <div class="player-card h-100">
+      <div class="card-body text-center">
+        <h5 class="fw-semibold mb-3 text-tennis-dark">
+          <a href="{% url 'tennis:player_page' match.opponent.id %}" class="player-link">
+            {{ match.opponent.name }}
+          </a>
+        </h5>
+        {% if match.opponent.ranking %}
+          <div class="rank-badge mb-3">World Rank: #{{ match.opponent.ranking }}</div>
+        {% endif %}
+
+        <!-- Serve Stats -->
+        <h6 class="fw-semibold mb-3 text-tennis-blue">Serve Statistics</h6>
+        {% for serve_stat in opponent_serve_stats %}
+          <div class="stat-row">
+            <div class="stat-label">Aces %</div>
+            <div class="stat-value">
+              {% if serve_stat.ace_pctg and serve_stat.ace_pctg >= 0 %}
+                {{ serve_stat.ace_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Double Faults %</div>
+            <div class="stat-value">
+              {% if serve_stat.df_pctg and serve_stat.df_pctg >= 0 %}
+                {{ serve_stat.df_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">1st Serve %</div>
+            <div class="stat-value">
+              {% if serve_stat.fs_pctg and serve_stat.fs_pctg >= 0 %}
+                {{ serve_stat.fs_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">1st Serve Points Won %</div>
+            <div class="stat-value">
+              {% if serve_stat.fs_w_pctg and serve_stat.fs_w_pctg >= 0 %}
+                {{ serve_stat.fs_w_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">2nd Serve Points Won %</div>
+            <div class="stat-value">
+              {% if serve_stat.ss_w_pctg and serve_stat.ss_w_pctg >= 0 %}
+                {{ serve_stat.ss_w_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Break Points Saved</div>
+            <div class="stat-value">
+              {% if serve_stat.bp_saved >= 0 and serve_stat.bp_faced >= 0 %}
+                {{ serve_stat.bp_saved }}/{{ serve_stat.bp_faced }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Dominance Ratio</div>
+            <div class="stat-value">
+              {% if serve_stat.dominance_ratio and serve_stat.dominance_ratio >= 0 %}
+                {{ serve_stat.dominance_ratio|floatformat:2 }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-muted">No serve statistics available</div>
+        {% endfor %}
+
+        <!-- Return Stats -->
+        <h6 class="fw-semibold mb-3 text-tennis-blue mt-4">Return Statistics</h6>
+        {% for return_stat in opponent_return_stats %}
+          <div class="stat-row">
+            <div class="stat-label">Return Points Won %</div>
+            <div class="stat-value">
+              {% if return_stat.return_p_w and return_stat.return_p_w >= 0 %}
+                {{ return_stat.return_p_w|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Total Points Won %</div>
+            <div class="stat-value">
+              {% if return_stat.total_p_w and return_stat.total_p_w >= 0 %}
+                {{ return_stat.total_p_w|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Faced Aces %</div>
+            <div class="stat-value">
+              {% if return_stat.v_ace_pctg and return_stat.v_ace_pctg >= 0 %}
+                {{ return_stat.v_ace_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">1st Serve Return Won %</div>
+            <div class="stat-value">
+              {% if return_stat.v_fs_pctg and return_stat.v_fs_pctg >= 0 %}
+                {{ return_stat.v_fs_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">2nd Serve Return Won %</div>
+            <div class="stat-value">
+              {% if return_stat.v_ss_pctg and return_stat.v_ss_pctg >= 0 %}
+                {{ return_stat.v_ss_pctg|multiply:100|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Break Points Converted</div>
+            <div class="stat-value">
+              {% if return_stat.bp_conv >= 0 and return_stat.bp_chances >= 0 %}
+                {{ return_stat.bp_conv }}/{{ return_stat.bp_chances }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Dominance Ratio</div>
+            <div class="stat-value">
+              {% if return_stat.dominance_ratio and return_stat.dominance_ratio >= 0 %}
+                {{ return_stat.dominance_ratio|floatformat:2 }}
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-muted">No return statistics available</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="row mt-4">
+  <div class="col-12 text-center">
+    <div class="d-flex justify-content-center gap-3">
+      <a href="{% url 'tennis:player_page' match.player.id %}" class="match-detail-btn">
+        View {{ match.player.name }} Profile
+      </a>
+      <a href="{% url 'tennis:player_page' match.opponent.id %}" class="match-detail-btn">
+        View {{ match.opponent.name }} Profile
+      </a>
+      <a href="{% url 'tennis:h_to_h_page' match.id %}" class="h2h-btn">
+        View H2H History
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

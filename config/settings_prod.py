@@ -2,64 +2,56 @@ import os
 from .settings_base import *
 import os
 
-ALLOWED_HOSTS = [
-    "127.0.0.1", "localhost",
-    "18.216.90.98",        # your public IP
-    ".compute-1.amazonaws.com",
-"tennisml.duckdns.org"  # EC2 public DNS
-]
-
 def _csv(name, default=""):
     raw = os.getenv(name, default)
     # Return list, stripping whitespace and dropping empties
     return [x.strip() for x in raw.split(",") if x.strip()]
 
-CSRF_TRUSTED_ORIGINS = [
-    o for o in _csv("DJANGO_CSRF_TRUSTED_ORIGINS")
-    if o.startswith("http://") or o.startswith("https://")
-]
-SECRET_KEY = os.environ["SECRET_KEY"]
 
+import dj_database_url
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
-    }
+    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
 }
 
-# Make sure logs go to ~/tennisapp/logs
-from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parent.parent
-LOG_DIR = BASE_DIR.parent / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+ALLOWED_HOSTS = _csv(
+    "DJANGO_ALLOWED_HOSTS",
+    "tennisbetsmart.com,www.tennisbetsmart.com,tennisml.duckdns.org,localhost,127.0.0.1",
+)
+
+
+CSRF_TRUSTED_ORIGINS = _csv(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    "https://tennisbetsmart.com,https://www.tennisbetsmart.com,https://tennisml.duckdns.org",
+)
+
+SECRET_KEY = os.environ["SECRET_KEY"]
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY env var is not set")
+
+DEBUG = os.getenv("DEBUG", "0") in ("1", "true", "True")
+
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+# Tell Django the original scheme/IP when proxied
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Optional: tighten referrers for CSRF (leave off if you use cross-site POSTs)
+CSRF_COOKIE_HTTPONLY = True
+
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        },
-    },
-    "handlers": {
-        "app_file": {
-            "class": "logging.FileHandler",
-            "filename": str(LOG_DIR / "django.log"),
-            "formatter": "verbose",
-        },
-    },
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
     "loggers": {
-        # your custom logger used by views
-        "tennis": {"handlers": ["app_file"], "level": "INFO", "propagate": False},
-
-        # CRITICAL: log 500s/tracebacks raised by views/middleware
-        "django.request": {"handlers": ["app_file"], "level": "ERROR", "propagate": False},
-
-        # Optional: DB errors
-        "django.db.backends": {"handlers": ["app_file"], "level": "ERROR", "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": True},
+        "django.template": {"handlers": ["console"], "level": "ERROR", "propagate": True},
     },
 }

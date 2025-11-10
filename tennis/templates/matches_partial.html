@@ -1,0 +1,161 @@
+{% for m in matches %}
+<div class="col">
+  <div class="card match-card h-100">
+    <div class="card-body">
+      <!-- Match header - CENTERED -->
+      <div class="match-header text-center mb-3">
+        <!-- Player names and VS badge -->
+        <div class="players-section mb-2">
+          {% if m.match.won %}
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.player.id %}">
+                {{ m.match.player.name }}
+              </a>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-center my-2">
+              <span class="vs-badge fs-6">D.</span>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.opponent.id %}">
+                {{ m.match.opponent.name }}
+              </a>
+            </div>
+          {% elif m.match.won == False %}
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.opponent.id %}">
+                {{ m.match.opponent.name }}
+              </a>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-center my-2">
+              <span class="vs-badge fs-6">D.</span>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-center mb-2">
+              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.player.id %}">
+                {{ m.match.player.name }}
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Match Score -->
+        <div class="match-score mb-2">
+          {{ m.match.score|default:"Score not available" }}
+        </div>
+
+        <!-- Tournament Info -->
+        <div class="tournament-badge">
+          {{ m.match.tournament }} • {{ m.match.date }}
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Rest of your existing content remains the same -->
+      <div class="text-center">Predicted Winner</div>
+      {% if m.match.won %}
+        <div class="winner-prediction">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-bold">
+              {% if m.ens_prob >= 0.5 %}
+                <span class="text-success">✓</span> {{ m.match.player.name }}
+              {% else %}
+                <span class="text-success">✓</span> {{ m.match.opponent.name }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% elif m.match.won == False %}
+        <div class="winner-prediction-wrong">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-bold">
+              {% if m.ens_prob >= 0.5 %}
+                <span class="text-danger">x</span> {{ m.match.player.name }}
+              {% else %}
+                <span class="text-danger">x</span> {{ m.match.opponent.name }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Confidence meter -->
+      <div class="d-flex justify-content-between small mb-1">
+        <span>Win Percentage</span>
+        <span class="fw-semibold">
+          {% if m.ens_prob >= 0.5 %}
+            {{ m.p1_pct|floatformat:1 }}%
+          {% else %}
+            {{ m.p2_pct|floatformat:1 }}%
+          {% endif %}
+        </span>
+      </div>
+      <div class="confidence-meter">
+        {% if m.ens_prob >= 0.5 %}
+          <div class="confidence-fill" style="width: {{ m.p1_pct }}%; background: linear-gradient(90deg,
+            {% if m.p1_pct >= 75 %}var(--tennis-green)
+            {% elif m.p1_pct >= 60 %}#4CAF50
+            {% elif m.p1_pct >= 55 %}#8BC34A
+            {% elif m.p1_pct >= 52 %}#CDDC39
+            {% else %}var(--tennis-orange)
+            {% endif %} 0%,
+            {% if m.p1_pct >= 75 %}var(--tennis-green)
+            {% elif m.p1_pct >= 60 %}#4CAF50
+            {% elif m.p1_pct >= 55 %}#8BC34A
+            {% elif m.p1_pct >= 52 %}#CDDC39
+            {% else %}var(--tennis-orange)
+            {% endif %} 100%);">
+          </div>
+        {% else %}
+          <div class="confidence-fill" style="width: {{ m.p2_pct }}%; background: linear-gradient(90deg,
+            {% if m.p2_pct >= 75 %}var(--tennis-green)
+            {% elif m.p2_pct >= 60 %}#4CAF50
+            {% elif m.p2_pct >= 55 %}#8BC34A
+            {% elif m.p2_pct >= 52 %}#CDDC39
+            {% else %}var(--tennis-orange)
+            {% endif %} 0%,
+            {% if m.p2_pct >= 75 %}var(--tennis-green)
+            {% elif m.p2_pct >= 60 %}#4CAF50
+            {% elif m.p2_pct >= 55 %}#8BC34A
+            {% elif m.p2_pct >= 52 %}#CDDC39
+            {% else %}var(--tennis-orange)
+            {% endif %} 100%);">
+          </div>
+        {% endif %}
+      </div>
+      <div class="confidence-label">
+        <span>50% (Toss-up)</span>
+        <span>100% (Certain)</span>
+      </div>
+
+      <!-- Moneylines -->
+      <div class="moneyline-section">
+        <div class="moneyline-header">Moneyline (No-Vig)</div>
+        <div class="moneyline-row">
+          <div class="fw-medium">{{ m.match.player.name }}</div>
+          <div class="fw-bold">
+            {% if m.ens_ml_p1|slice:":1" == "-" %}
+              {{ m.ens_ml_p1 }}
+            {% else %}
+              +{{ m.ens_ml_p1 }}
+            {% endif %}
+          </div>
+        </div>
+        <div class="moneyline-row">
+          <div class="fw-medium">{{ m.match.opponent.name }}</div>
+          <div class="fw-bold">
+            {% if m.ens_ml_p2|slice:":1" == "-" %}
+              {{ m.ens_ml_p2 }}
+            {% else %}
+              +{{ m.ens_ml_p2 }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}

@@ -1,29 +1,217 @@
 {% extends 'base.html' %}
-
-{% block title %}Home - Tennis Predictions{% endblock %}
-
+{% block title %}Tennis Betting Predictions - AI-Powered Match Analysis{% endblock %}
 {% block content %}
 
-<div class="container">
-    <h1>upcoming matches:</h1>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Match</th>
-                <th>Odds</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in match_odds_list %}
-                <tr>
+<!-- Hero Section -->
+<div class="page-header mb-5">
+  <div class="row align-items-center">
+    <div class="col-lg-8">
+      <h1 class="h2 fw-bold mb-3">Smart Tennis Predictions</h1>
+      <p class="lead mb-4 opacity-75">
+        AI-powered match predictions and value betting opportunities.
+        Get data-driven insights to make smarter tennis decisions.
+      </p>
+      <div class="d-flex gap-3 flex-wrap">
+        <a href="{% url 'tennis:upcoming_matches' %}" class="h2h-btn">
+          View Upcoming Matches
+        </a>
+        <a href="{% url 'tennis:completed_matches' %}" class="h2h-btn">
+          Completed Matches
+        </a>
+      </div>
+    </div>
+    <div class="col-lg-4 text-center">
+      <div class="hero-card">
+        <div class="hero-icon">🎾</div>
+        <h5 class="hero-title">Live Predictions</h5>
+        <p class="hero-text">Machine learning models analyzing player performance, form, and match conditions</p>
+      </div>
+    </div>
+  </div>
+</div>
 
-                    <td>{{ r.match }}</td>
-                    <td>{{ r.odds }}</td>
-                    </a>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- How It Works Section -->
+<div class="player-card mb-5">
+  <div class="card-body">
+    <h2 class="h4 fw-semibold mb-4 text-center text-tennis-dark">Understanding Our Predictions</h2>
+
+    <!-- Model Probabilities -->
+    <div class="info-card mb-4">
+      <div class="info-card-header">
+        <h4 class="h5 mb-0">🤖 What Do the Percentages Mean?</h4>
+      </div>
+      <div class="info-card-body">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <p>Our machine learning models calculate the <strong>true probability</strong> of each player winning:</p>
+            <p class="mb-0"><strong>Example:</strong> 65% = player has 65% chance to win based on historical data analysis</p>
+          </div>
+          <div class="col-md-4 text-center">
+            <div class="probability-example">
+              <div class="probability-value">65%</div>
+              <small class="probability-label">Win Probability</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No-Vig Explained -->
+    <div class="info-card mb-4">
+      <div class="info-card-header">
+        <h4 class="h5 mb-0">💰 What is "No-Vig" or "Fair Odds"?</h4>
+      </div>
+      <div class="info-card-body">
+        <div class="row">
+          <div class="col-md-8">
+            <p>Sportsbooks build in a profit margin (the "vig" or "juice") to all bets. We remove this to show you the <strong>true fair value</strong>.</p>
+
+            <div class="odds-comparison">
+              <div class="odds-example">
+                <h6 class="odds-title">Sportsbook Example:</h6>
+                <div class="odds-row">
+                  <div class="odds-team">
+                    <div>Player A: -150</div>
+                    <small class="odds-implied">Implied: 60%</small>
+                  </div>
+                  <div class="odds-team">
+                    <div>Player B: +130</div>
+                    <small class="odds-implied">Implied: 43%</small>
+                  </div>
+                </div>
+                <div class="odds-total">Total: 103% (3% vig)</div>
+              </div>
+
+              <div class="odds-example fair-odds">
+                <h6 class="odds-title">Our Fair Odds:</h6>
+                <div class="odds-row">
+                  <div class="odds-team">
+                    <div>Player A: -140</div>
+                    <small class="odds-implied">True: 58%</small>
+                  </div>
+                  <div class="odds-team">
+                    <div>Player B: +140</div>
+                    <small class="odds-implied">True: 42%</small>
+                  </div>
+                </div>
+                <div class="odds-total">Total: 100% (no vig)</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="info-alert">
+              <h6 class="alert-title">Key Takeaway</h6>
+              <p class="mb-0">Our odds represent the true probability without bookmaker profit margins.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Betting Strategy -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <h4 class="h5 mb-0">🎯 When Should You Consider Betting?</h4>
+      </div>
+      <div class="info-card-body">
+        <div class="row">
+          <div class="col-md-6 mb-4">
+            <div class="strategy-card good-bet">
+              <div class="strategy-header">
+                <h5 class="mb-0">✅ Potential Value</h5>
+              </div>
+              <div class="strategy-body">
+                <p><strong>Sportsbook offers BETTER odds than our fair value</strong></p>
+                <div class="odds-example">
+                  <div class="odds-row">
+                    <div class="odds-team">
+                      <div class="fw-bold">Our Fair:</div>
+                      <div>+150</div>
+                    </div>
+                    <div class="odds-team">
+                      <div class="fw-bold">Sportsbook:</div>
+                      <div>+180</div>
+                    </div>
+                  </div>
+                </div>
+                <p class="strategy-note">You're getting more value than the true probability suggests</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 mb-4">
+            <div class="strategy-card avoid-bet">
+              <div class="strategy-header">
+                <h5 class="mb-0">❌ Less Value</h5>
+              </div>
+              <div class="strategy-body">
+                <p><strong>Sportsbook offers WORSE odds than our fair value</strong></p>
+                <div class="odds-example">
+                  <div class="odds-row">
+                    <div class="odds-team">
+                      <div class="fw-bold">Our Fair:</div>
+                      <div>-140</div>
+                    </div>
+                    <div class="odds-team">
+                      <div class="fw-bold">Sportsbook:</div>
+                      <div>-160</div>
+                    </div>
+                  </div>
+                </div>
+                <p class="strategy-note">You're getting less value than the true probability suggests</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pro-tip">
+          <h6 class="tip-title">💡 Pro Tip: Look for Value Discrepancies</h6>
+          <p class="mb-0">The biggest opportunities come when our models strongly disagree with sportsbook odds. When we show 70% probability but sportsbooks price it like 60%, that's potential value!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Reference -->
+<div class="player-card mb-5">
+  <div class="card-body">
+    <h3 class="h4 fw-semibold mb-4 text-center text-tennis-dark">Quick Reference Guide</h3>
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="reference-card">
+          <div class="reference-icon">📊</div>
+          <h5>Reading Match Cards</h5>
+          <ul class="reference-list">
+            <li><strong>Win Probability:</strong> Our model's predicted chance to win</li>
+            <li><strong>Fair Odds:</strong> True value without bookmaker margin</li>
+            <li><strong>Confidence Meter:</strong> Visual indicator of prediction strength</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="reference-card">
+          <div class="reference-icon">⚡</div>
+          <h5>Using the Data</h5>
+          <ul class="reference-list">
+            <li>Compare our fair odds with sportsbook offerings</li>
+            <li>Focus on matches with clear probability edges</li>
+            <li>Use head-to-head history for additional context</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA Section -->
+<div class="page-header">
+  <div class="text-center">
+    <h3 class="h3 fw-bold mb-3">Ready to Explore Match Predictions?</h3>
+    <p class="lead mb-4 opacity-75">Start browsing today's matches and see our AI predictions in action.</p>
+    <a href="{% url 'tennis:upcoming_matches' %}" class="match-detail-btn btn-lg">
+      View Upcoming Matches
+    </a>
+  </div>
 </div>
 
 {% endblock %}

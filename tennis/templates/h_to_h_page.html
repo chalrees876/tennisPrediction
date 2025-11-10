@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}H2H - {{ player.name }} vs {{ opponent.name }} - Tennis Predictions{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1 class="h3 fw-bold mb-2">{{ player.name }} vs {{ opponent.name }}</h1>
+      <div class="d-flex align-items-center gap-3">
+        {% if player_wins > opponent_wins %}
+          <div class="h2h-lead-badge">
+            {{ player.name }} leads {{ player_wins }} - {{ opponent_wins }}
+          </div>
+        {% elif opponent_wins > player_wins %}
+          <div class="h2h-lead-badge">
+            {{ opponent.name }} leads {{ opponent_wins }} - {{ player_wins }}
+          </div>
+        {% else %}
+          <div class="h2h-lead-badge">
+            Tied {{ player_wins }} - {{ opponent_wins }}
+          </div>
+        {% endif %}
+        <div class="h2h-total-matches">
+          {{ h2h_matches|length }} Total Matches
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- H2H Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="player-card text-center">
+      <div class="card-body">
+        <h5 class="fw-semibold mb-3">{{ player.name }}</h5>
+        {% if player.ranking %}
+          <div class="rank-badge-small mb-2">World Rank: #{{ player.ranking }}</div>
+        {% endif %}
+        <div class="h2h-stat-value text-tennis-green">{{ player_wins }}</div>
+        <div class="h2h-stat-label">Wins</div>
+        <div class="h2h-win-percentage">
+          {% widthratio player_wins h2h_matches|length 100 %}% Win Rate
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="player-card text-center">
+      <div class="card-body">
+        <h5 class="fw-semibold mb-3">{{ opponent.name }}</h5>
+        {% if opponent.ranking %}
+          <div class="rank-badge-small mb-2">World Rank: #{{ opponent.ranking }}</div>
+        {% endif %}
+        <div class="h2h-stat-value text-tennis-blue">{{ opponent_wins }}</div>
+        <div class="h2h-stat-label">Wins</div>
+        <div class="h2h-win-percentage">
+          {% widthratio opponent_wins h2h_matches|length 100 %}% Win Rate
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Surface Breakdown -->
+{% if surface_stats %}
+<div class="player-card mb-4">
+  <div class="card-body">
+    <h5 class="fw-semibold mb-3 text-tennis-dark">Surface Breakdown</h5>
+    <div class="row">
+      {% for surface, stats in surface_stats.items %}
+      <div class="col-md-4 mb-3">
+        <div class="surface-stat-card">
+          <div class="surface-name">{{ surface|default:"Unknown" }}</div>
+          <div class="surface-record">
+            {{ stats.player_wins }} - {{ stats.opponent_wins }}
+          </div>
+          <div class="surface-matches">{{ stats.total }} matches</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Matches Section -->
+<div class="player-card">
+  <div class="card-body">
+    <h5 class="fw-semibold mb-3 text-tennis-dark">Head-to-Head Matches</h5>
+
+    {% if h2h_matches %}
+      <div class="matches-table">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Tournament</th>
+                <th>Surface</th>
+                <th>Round</th>
+                <th>Winner</th>
+                <th>Score</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for match in h2h_matches %}
+                <tr>
+                  <td>
+                    <span style="font-weight: 500; color: var(--tennis-dark);">
+                      {{ match.date|date:"M d, Y" }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="tournament-badge-small">{{ match.tournament }}</span>
+                  </td>
+                  <td>
+                    {% if match.surface %}
+                      <span class="surface-badge">{{ match.surface }}</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="round-badge">{{ match.round }}</span>
+                  </td>
+                  <td>
+                    {% if match.won %}
+                      <span class="win-badge">{{ match.player.name }}</span>
+                    {% else %}
+                      <span class="loss-badge">{{ match.opponent.name }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span style="font-family: 'Courier New', monospace; font-weight: 600; color: var(--tennis-dark);">
+                      {{ match.score|default:"-" }}
+                    </span>
+                  </td>
+                  <td>
+                    <a href="{% url 'tennis:match_page' match.id %}" class="match-detail-btn">
+                      View
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">🤝</div>
+        <h5 class="h6">No Head-to-Head Matches</h5>
+        <p class="text-muted mb-0">These players haven't faced each other yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
