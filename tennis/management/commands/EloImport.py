@@ -105,7 +105,7 @@ class Command(BaseCommand):
 
         driver.get("https://tennisabstract.com/reports/atp_elo_ratings.html")
 
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 100)
         ranking_element = wait.until(
             EC.presence_of_element_located((By.ID, "reportable"))
         )  # <-- waits for it to exist in the DOM
