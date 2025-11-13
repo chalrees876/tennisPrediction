@@ -7,6 +7,9 @@ import math
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 from tennis.models import Player, PlayerElo
 
 class Command(BaseCommand):
@@ -95,13 +98,22 @@ class Command(BaseCommand):
         chrome_options.add_experimental_option("prefs", {
             "profile.managed_default_content_settings.images": 2,  # Disable images
         })
+        chrome_options.add_argument("user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)")
 
         # Initialize driver
         driver = webdriver.Chrome(options=chrome_options)
 
         driver.get("https://tennisabstract.com/reports/atp_elo_ratings.html")
 
-        ranking_element = driver.find_element(By.ID, "reportable")
+        wait = WebDriverWait(driver, 20)
+        ranking_element = wait.until(
+            EC.presence_of_element_located((By.ID, "reportable"))
+        )  # <-- waits for it to exist in the DOM
+
+        # optional: ensure it’s visible
+        wait.until(
+            EC.visibility_of_element_located((By.ID, "reportable"))
+        )
 
         header_data = ranking_element.find_elements(By.TAG_NAME, "th")
         headers = []

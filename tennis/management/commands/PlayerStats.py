@@ -88,6 +88,8 @@ class Command(BaseCommand):
         chrome_options.add_experimental_option("prefs", {
             "profile.managed_default_content_settings.images": 2,  # Disable images
         })
+        chrome_options.add_argument("user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)")
+
 
         # Initialize driver
         driver = webdriver.Chrome(options=chrome_options)
