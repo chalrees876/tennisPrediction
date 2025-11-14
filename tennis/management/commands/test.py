@@ -1,7 +1,9 @@
 from pprint import pprint
 
+from bs4 import BeautifulSoup
 from django.core.management import BaseCommand
 from django.db.models import Q
+import requests
 
 from tennis.models import PlayerMatch
 
@@ -9,9 +11,7 @@ from tennis.models import PlayerMatch
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        q1 = (Q(player__name="Jannik Sinner", opponent__name="Ben Shelton"))
-        q2 =  Q(player__name="Ben Shelton", opponent__name="Jannik Sinner")
-
-        matches = PlayerMatch.objects.filter(Q(q1) | Q(q2))
-        for match in matches:
-            print(match, match.id, match.player)
+        url = "https://tennisabstract.com/reports/atp_elo_ratings.html"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        print(soup.prettify())
