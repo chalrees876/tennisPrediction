@@ -87,47 +87,51 @@ class Command(BaseCommand):
             self.stdout.write(f"Summary\n{success_count} successes\n{error_count} errors")
 
     def get_men_elo_data(self):
-        # Set up Chrome options
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
+        chrome_options.add_argument("--headless=new")  # more stable on recent Chrome
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Block images for faster loading
         chrome_options.add_experimental_option("prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Disable images
+            "profile.managed_default_content_settings.images": 2,
         })
-        chrome_options.add_argument("user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)")
-
-        # Initialize driver
-        driver = webdriver.Chrome(options=chrome_options)
-
-        driver.get("https://tennisabstract.com/reports/atp_elo_ratings.html")
-
-        wait = WebDriverWait(driver, 100)
-        ranking_element = wait.until(
-            EC.presence_of_element_located((By.ID, "reportable"))
-        )  # <-- waits for it to exist in the DOM
-
-        # optional: ensure it’s visible
-        wait.until(
-            EC.visibility_of_element_located((By.ID, "reportable"))
+        chrome_options.add_argument(
+            "user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)"
         )
 
-        header_data = ranking_element.find_elements(By.TAG_NAME, "th")
-        headers = []
-        for i, header in enumerate(header_data):
-            if not header.text.isspace():
-                headers.append(header.text)
+        driver = webdriver.Chrome(options=chrome_options)
 
-        rows = ranking_element.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
-        total_data = []
-        for row in rows:
-            cell_data = row.find_elements(By.TAG_NAME, "td")
-            cells = [cell.text for cell in cell_data if cell.text.strip()]
-            row_dict = dict(zip(headers, cells))
-            total_data.append(row_dict)
-        pprint(total_data)
-        driver.close()
-        return total_data
+        try:
+            driver.get("https://tennisabstract.com/reports/atp_elo_ratings.html")
+
+            wait = WebDriverWait(driver, 100)
+            ranking_element = wait.until(
+                EC.presence_of_element_located((By.ID, "reportable"))
+            )  # <-- waits for it to exist in the DOM
+
+            # optional: ensure it’s visible
+            wait.until(
+                EC.visibility_of_element_located((By.ID, "reportable"))
+            )
+
+            header_data = ranking_element.find_elements(By.TAG_NAME, "th")
+            headers = []
+            for i, header in enumerate(header_data):
+                if not header.text.isspace():
+                    headers.append(header.text)
+
+            rows = ranking_element.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
+            total_data = []
+            for row in rows:
+                cell_data = row.find_elements(By.TAG_NAME, "td")
+                cells = [cell.text for cell in cell_data if cell.text.strip()]
+                row_dict = dict(zip(headers, cells))
+                total_data.append(row_dict)
+            pprint(total_data)
+            return total_data
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"{e}"))
+            return []
+        finally:
+            driver.quit()
