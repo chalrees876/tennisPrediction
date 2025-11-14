@@ -5,6 +5,7 @@ from django.db import transaction
 import math
 
 from selenium import webdriver
+from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -88,7 +89,7 @@ class Command(BaseCommand):
 
     def get_men_elo_data(self):
         chrome_options = Options()
-        chrome_options.add_argument("--headless=new")  # more stable on recent Chrome
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -100,26 +101,32 @@ class Command(BaseCommand):
             "user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)"
         )
 
-        driver = webdriver.Chrome(options=chrome_options)
+        try:
+            driver = webdriver.Chrome(options=chrome_options)
+        except WebDriverException as e:
+            self.stderr.write(f"[EloImport] Failed to start Chrome: {e}")
+            return []
 
         try:
             driver.get("https://tennisabstract.com/reports/atp_elo_ratings.html")
 
-            wait = WebDriverWait(driver, 100)
-            ranking_element = wait.until(
-                EC.presence_of_element_located((By.ID, "reportable"))
-            )  # <-- waits for it to exist in the DOM
+            self.stdout.write(f"[EloImport] Loaded URL: {driver.current_url}")
+            self.stdout.write(f"[EloImport] Page title: {driver.title!r}")
 
-            # optional: ensure it’s visible
-            wait.until(
-                EC.visibility_of_element_located((By.ID, "reportable"))
-            )
+            wait = WebDriverWait(driver, 20)
+
+            try:
+                ranking_element = wait.until(
+                    EC.presence_of_element_located((By.ID, "reportable"))
+                )
+            except TimeoutException:
+                self.stderr.write("[EloImport] Timed out waiting for #reportable")
+                snippet = driver.page_source[:700].replace("\n", " ")
+                self.stderr.write(f"[EloImport] Page snippet: {snippet}")
+                return []
 
             header_data = ranking_element.find_elements(By.TAG_NAME, "th")
-            headers = []
-            for i, header in enumerate(header_data):
-                if not header.text.isspace():
-                    headers.append(header.text)
+            headers = [h.text for h in header_data if h.text.strip()]
 
             rows = ranking_element.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
             total_data = []
@@ -128,10 +135,12 @@ class Command(BaseCommand):
                 cells = [cell.text for cell in cell_data if cell.text.strip()]
                 row_dict = dict(zip(headers, cells))
                 total_data.append(row_dict)
-            pprint(total_data)
+
             return total_data
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"{e}"))
+
+        except WebDriverException as e:
+            self.stderr.write(f"[EloImport] WebDriverException while loading page: {e}")
             return []
+
         finally:
             driver.quit()
