@@ -5,60 +5,40 @@ import sys
 from pprint import pprint
 from typing import Optional
 
+from django.core.management import BaseCommand
 from dotenv import load_dotenv
 import requests
 
-load_dotenv()
-
-organization = "ATP"
-
-url = f"https://api.api-tennis.com/tennis/?method=get_standings&event_type={organization}&APIkey={os.getenv('API_KEY')}"
-
-response = requests.get(url)
-
-def convert_bday(bday: str) -> int:
-    try:
-        bday = datetime.strptime(bday, "%d.%m.%Y")
-        today = datetime.today()
-        bday_passed = True if today.month >= bday.month and today.day >= bday.day else False
-        age = (today.year - bday.year + 1) if bday_passed else today.year - bday.year
-        return int(age)
-    except ValueError:
-        print("Invalid date")
-        return 0
-
-players = []
-
-for player in response.json()["result"]:
-    players_dict = {
-        "name": player["player"],
-        "key": player["player_key"]
-    }
-    players.append(players_dict)
-
-url2 = f"https://api.api-tennis.com/tennis/?method=get_fixtures&APIkey={os.getenv('API_KEY')}&date_start=1999-01-01&date_stop={str(datetime.today().date())}&player_key={players[3]['key']}"
-
-response = requests.get(url2)
-
-player_key = players[3]['key']
-
-def get_statistics(row, key):
-    stat_period = row.get("stat_period")
-    if stat_period == "match" and row["player_key"] == player_key:
-        print(f"{row['stat_name']} {row['stat_value']}")
-        print(f"{row['stat_won']} out of {row['stat_total']}")
+from tennis.models import Player, PlayerRanking
 
 
-for event in response.json()["result"]:
-    tournament = event["tournament_name"]
-    tournament_key = event["tournament_key"]
-    key = event["event_key"]
-    date = event["event_date"]
-    time = event["event_time"]
-    print(tournament, date, time)
-    event_winner = event["event_winner"]
-    print(event_winner)
-    statistics = event["statistics"]
-    print(len(statistics))
-    for row in statistics if statistics else []:
-        get_statistics(row, player_key)
+class Command(BaseCommand):
+    help = """
+    Import player ranking data. Going into django model 'PlayerRanking'
+    columns needed: 
+        player (player object)
+        ranking (int)
+        league (Enum)
+        movement (Enum)
+        points (int)
+    """
+
+    def handle(self, *args, **options):
+        load_dotenv()
+        organization = "ATP" #just focus on ATP for now
+        url = f"https://api.api-tennis.com/tennis/?method=get_standings&event_type=ATP&APIkey={os.getenv('API_KEY')}"
+        response = requests.get(url)
+        for player in response.json()["result"]:
+            try:
+                key = player["player_key"]
+                ranking = player["place"]
+                league=player["league"]
+                movement = player["movement"]
+                points = player["points"]
+                player, created = PlayerRanking.objects.update_or_create(player=Player.objects.get(key=key), ranking=ranking, league=league, movement=movement, points=points)
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f"Player {key} created successfully!"))
+                else:
+                    self.stdout.write(self.style.ERROR(f"Player {key} updated successfully!"))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"{e}"))

@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django.db.models import Q
 
 from tennis.ml.feature_engineering import TennisFeatureEngineer
-from tennis.models import Player, PlayerElo, PlayerMatch, PlayerMatchServeStats, PlayerMatchReturnStats
+from tennis.models import Player, PlayerMatch
 
 
 def prob_to_american(p: float, round_to: int = 1) -> int:

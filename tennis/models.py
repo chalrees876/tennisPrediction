@@ -1,203 +1,244 @@
-from django.core.exceptions import ValidationError
+from typing import Optional
 from django.db import models
-from django.db.models.fields.related import ForeignKey
-from django.urls import reverse
-from django import forms
-# Create your models here.
+from django_enum import EnumField
+
 
 class Player(models.Model):
     name = models.CharField(max_length=100, unique=True)
     age = models.IntegerField(null=True, blank=True)
-    ranking = models.IntegerField(null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    # API player_key
+    key = models.IntegerField(primary_key=True)
 
     def __str__(self):
-        return f"{self.name}"
+        if self.age:
+            return f"{self.name} ({self.age})"
+        return self.name
 
-class PlayerElo(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    elo = models.FloatField()
-    elo_ranking = models.IntegerField()
-    h_elo = models.FloatField()
-    h_elo_ranking = models.IntegerField()
-    c_elo = models.FloatField()
-    c_elo_ranking = models.IntegerField()
-    g_elo = models.FloatField()
-    g_elo_ranking = models.IntegerField()
-    peak_elo = models.FloatField()
 
-class PlayerServeStats(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    matches = models.IntegerField()
-    matches_w_pctg = models.FloatField()
-    service_p_w_pctg = models.FloatField()
-    service_p_in_w_pctg = models.FloatField()
-    aces = models.IntegerField()
-    aces_pctg = models.FloatField()
-    dfs = models.IntegerField()
-    df_pctg = models.FloatField()
-    df_per_2nd = models.FloatField()
-    fs_pctg = models.FloatField()
-    fs_w_pctg = models.FloatField()
-    ss_w_pctg = models.FloatField()
-    ss_w_pctg_less_df = models.FloatField()
-    hold_pctg = models.FloatField()
-    pts_per_sg = models.FloatField()
-    pts_l_per_sg = models.FloatField()
+class PlayerRanking(models.Model):
+    class League(models.TextChoices):
+        ATP = "ATP", "ATP"
+        WTA = "WTA", "WTA"
 
-class PlayerReturnStats(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    matches = models.IntegerField()
-    return_p_w_pctg = models.FloatField()
-    return_p_in_w_pctg = models.FloatField()
-    ace_pctg_against = models.FloatField()
-    df_pctg_against = models.FloatField()
-    fs_r_p_w_pctg = models.FloatField()
-    ss_r_p_w_pctg = models.FloatField()
-    break_pctg = models.FloatField()
-    pts_per_rg = models.FloatField()
-    pts_w_per_rg = models.FloatField()
-    med_opp_ranking = models.FloatField()
-    mean_opp_ranking = models.FloatField()
+    class Movement(models.TextChoices):
+        UP = "up", "UP"
+        DOWN = "down", "DOWN"
+        SAME = "same", "SAME"
 
-class PlayerBreakStats(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    matches = models.IntegerField()
-    break_p_conv_pctg = models.FloatField()
-    bp_conv = models.FloatField()
-    bp_chances = models.FloatField()
-    bp_per_g = models.FloatField()
-    bp_per_s = models.FloatField()
-    bp_per_m = models.FloatField()
-    break_per_s = models.FloatField()
-    break_per_m = models.FloatField()
-    bp_saved_pctg = models.FloatField()
-    bp_saved = models.IntegerField()
-    bp_faced = models.IntegerField()
-    bp_faced_per_g = models.FloatField()
-    bp_faced_per_s = models.FloatField()
-    bp_faced_per_m = models.FloatField()
-    sg_l_per_s = models.FloatField()
-    sg_l_per_m = models.FloatField()
+    ranking = models.IntegerField(null=True, blank=True)
+    league = EnumField(League, default=None, null=True, blank=True)
+    movement = EnumField(Movement, default=None, null=True, blank=True)
+    points = models.IntegerField(null=True, blank=True)
 
-class PlayerMoreStats(models.Model):
-    player = models.ForeignKey(Player, on_delete=models.CASCADE)
-    matches = models.IntegerField()
-    dominance_ratio = models.FloatField()
-    points = models.IntegerField()
-    p_w_pctg = models.FloatField()
-    tbs = models.IntegerField()
-    tb_wl = models.CharField(max_length=100)
-    tb_w_pctg = models.FloatField()
-    tb_per_s = models.FloatField()
-    sets = models.IntegerField()
-    set_wl = models.CharField(max_length=100)
-    set_w_pctg = models.FloatField()
-    games = models.IntegerField()
-    game_wl = models.CharField(max_length=100)
-    game_w_pctg = models.FloatField()
-    time_per_match = models.CharField(max_length=100)
-    min_per_s = models.FloatField()
-    sec_per_p = models.FloatField()
+    def __str__(self):
+        return f"{self.player.name} {self.league} #{self.ranking} ({self.points} pts)"
+
+
+# tennis/models.py
 
 class Tournament(models.Model):
+    """
+    One row per tournament_key (per event type).
+    Example:
+      tournament_key=2131, name='Acapulco', event_type_type='Atp Singles'
+    """
+
+    tournament_key = models.IntegerField(unique=True)  # from API "tournament_key"
     name = models.CharField(max_length=100)
-    year = models.IntegerField()
+
+    # Optional event-type metadata (from get_tournaments / fixtures)
+    event_type_key = models.IntegerField(null=True, blank=True)
+    event_type_type = models.CharField(max_length=50, blank=True)
 
     class Meta:
-        unique_together = ("name", "year")
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.name}"
+        return self.name
+
 
 class PlayerMatch(models.Model):
+    """
+    One row per event (match).
+    Ties directly to api-tennis "event_*" fields.
+    """
+    # event_key from API
+    key = models.IntegerField(primary_key=True)
+
     date = models.DateField(null=False)
-    player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player", null=False)
-    tournament = ForeignKey(Tournament, on_delete=models.CASCADE)
-    surface = models.CharField(max_length=20, default="Not Specified")
-    round = models.CharField(max_length=50, null=False, blank=False)
-    rank = models.IntegerField()
-    opponent_rank = models.IntegerField()
-    opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent", null=False)
-    score = models.CharField(max_length=50)
-    won = models.BooleanField(default=None, null=True)
-    completed = models.BooleanField(blank=True, null=True)
+    time = models.TimeField(null=False)
 
-    class Meta:
-        unique_together = ("player", "opponent", "round", "tournament", "date")
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
 
-    def __str__(self):
-        if self.completed:
-            if self.won:
-                return f"{self.player} d. {self.opponent} - {self.score} @ {self.tournament}"
-            else:
-                return f"{self.opponent} d. {self.player} - {self.score} @ {self.tournament}"
+    # "tournament_round" from the API, e.g. "US Open - 1/64-finals" or "Athens - Final"
+    round = models.CharField(max_length=100)
 
-        else:
-            return f"{self.player} vs. {self.opponent} - {self.score} @ {self.tournament}"
+    # Surface (you can later map actual surfaces if API provides it)
+    surface = models.CharField(max_length=20, default="Not Specified", blank=True)
 
+    # Best-of-X sets (3 or 5 usually). May be null if unknown.
+    best_of = models.IntegerField(null=True, blank=True)
 
-class PlayerMatchServeStats(models.Model):
-    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
-    dominance_ratio = models.FloatField(null=True, default=-1)
-    ace_pctg = models.FloatField(null=True, default=-1)
-    df_pctg = models.FloatField(null=True, default=-1)
-    fs_pctg = models.FloatField(null=True, default=-1)
-    fs_w_pctg = models.FloatField(null=True, default=-1)
-    ss_w_pctg = models.FloatField(null=True, default=-1)
-    bp_saved = models.IntegerField(null=True, default=-1)
-    bp_faced = models.IntegerField(null=True, default=-1)
-    time = models.CharField(max_length=50, null=True)
-
-class PlayerMatchReturnStats(models.Model):
-    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
-    dominance_ratio = models.FloatField(null=True, default=-1)
-    total_p_w = models.FloatField(null=True, default=-1)
-    return_p_w = models.FloatField(null=True, default=-1)
-    v_ace_pctg = models.FloatField(null=True, default=-1)
-    v_fs_pctg = models.FloatField(null=True, default=-1)
-    v_ss_pctg = models.FloatField(null=True, default=-1)
-    bp_conv = models.IntegerField(null=True, default=-1)
-    bp_chances = models.IntegerField(null=True, default=-1)
-    time = models.CharField(max_length=50, null=True, default="")
-
-class PlayerMatchKeyGames(models.Model):
-    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
-    bp_games = models.CharField(max_length=100)
-    bp_conv = models.CharField(max_length=100)
-    break_back = models.CharField(max_length=100)
-    g_with_bp = models.CharField(max_length=100)
-    hold_per_g_with_bp = models.CharField(max_length=100)
-    consolidation_pctg = models.FloatField()
-    serve_for_s = models.CharField(max_length=100)
-    serve_stay_s = models.CharField(max_length=100)
-    serve_for_m = models.CharField(max_length=100)
-    serve_stay_m = models.CharField(max_length=100)
-
-class PlayerPointByPointStats(models.Model):
-    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
-    balanced_leverage_ration = models.FloatField()
-    dominance_ratio_plus = models.FloatField()
-    excitement_index = models.FloatField()
-    comeback_factor = models.FloatField()
-    deuce_ace_pctg = models.FloatField()
-    deuce_s_w_pctg = models.FloatField()
-    ad_ace_pctg = models.FloatField()
-    ad_s_w_pctg = models.FloatField()
-    deuce_r_w_pctg = models.FloatField()
-    ad_r_w_pctg = models.FloatField()
-
-"""class MatchForm(forms.Form):
-    player = forms.ModelChoiceField(
-        queryset=Player.objects.all(),
-        widget=forms.Select(attrs={'id': 'player_select'})
+    # Player roles as given by API (First Player / Second Player)
+    first_player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name="matches_as_first",
+    )
+    second_player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name="matches_as_second",
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # If the form is bound (GET), include the submitted choice in the queryset
-        if self.is_bound:
-            raw = self.data.get(self.add_prefix("player")) or self.data.get("player")
-            if raw:
-                self.fields["player"].queryset = Player.objects.filter(pk=raw)"""
+    # Winner of the match
+    winner = models.ForeignKey(
+        Player,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="matches_won",
+    )
+
+    # Simple textual outcome
+    final_result = models.CharField(
+        max_length=20, blank=True
+    )  # "2 - 1", "3 - 1", etc. (event_final_result)
+    score_line = models.CharField(
+        max_length=100, blank=True
+    )  # "6-1 6-7(5) 6-2 6-1" (parsed from scores[])
+
+    # Metadata about the event
+    event_type = models.CharField(
+        max_length=50, blank=True
+    )  # "Atp Singles" (event_type_type)
+    status = models.CharField(
+        max_length=20, blank=True
+    )  # "Finished", "Not Started", etc. (event_status)
+    event_serve = models.CharField(
+        max_length=20, blank=True
+    )  # event_serve if used (e.g., who served first)
+
+    is_live = models.BooleanField(default=False)
+    is_qualification = models.BooleanField(default=False)
+
+    # Rich data kept as JSON for flexibility. Not every match will have these.
+    point_by_point = models.JSONField(null=True, blank=True)  # pointbypoint[]
+    statistics_raw = models.JSONField(null=True, blank=True)  # raw statistics[] from API
+    raw_scores = models.JSONField(null=True, blank=True)      # scores[]
+    odds_raw = models.JSONField(null=True, blank=True)
 
 
+    class Meta:
+        ordering = ["-date", "-time"]
+
+    def __str__(self):
+        if self.winner_id:
+            loser = (
+                self.second_player if self.winner_id == self.first_player_id
+                else self.first_player
+            )
+            if self.score_line:
+                return f"{self.winner.name} d. {loser.name} {self.score_line} @ {self.tournament}"
+            return f"{self.winner.name} d. {loser.name} @ {self.tournament}"
+        return f"{self.first_player.name} vs {self.second_player.name} @ {self.tournament}"
+
+    # ---------- generic helpers for stats (Option 1) ----------
+
+    def get_stat(self, player, period: str, category: str, name: str) -> Optional["MatchStatistic"]:
+        """
+        Example:
+        match.get_stat(djokovic, "match", "Service", "1st Serve Points Won")
+        """
+        return self.stats.filter(
+            player=player,
+            period=period,
+            category=category,
+            name=name,
+        ).first()
+
+    def get_stat_value(
+        self,
+        player,
+        period: str,
+        category: str,
+        name: str,
+        prefer_percent: bool = True,
+    ) -> Optional[float]:
+        """
+        Convenience wrapper that returns the numeric value for a stat.
+        - If prefer_percent=True and value_percent is available, returns that.
+        - Else tries value_number.
+        - Returns None if not found.
+        """
+        stat = self.get_stat(player, period, category, name)
+        if not stat:
+            return None
+        if prefer_percent and stat.value_percent is not None:
+            return stat.value_percent
+        if stat.value_number is not None:
+            return stat.value_number
+        return None
+
+
+class MatchStatistic(models.Model):
+    """
+    Parsed per-match statistics (optional – only when the API provides them).
+    Kept generic so you don't hard-code fields like 'fs_win_pctg' in the DB.
+    """
+
+    class Period(models.TextChoices):
+        MATCH = "match", "Match"
+        SET1 = "set1", "Set 1"
+        SET2 = "set2", "Set 2"
+        SET3 = "set3", "Set 3"
+        SET4 = "set4", "Set 4"
+        SET5 = "set5", "Set 5"
+
+    class Category(models.TextChoices):
+        SERVICE = "Service", "Service"
+        RETURN = "Return", "Return"
+        POINTS = "Points", "Points"
+        GAMES = "Games", "Games"
+
+    match = models.ForeignKey(
+        PlayerMatch,
+        on_delete=models.CASCADE,
+        related_name="stats",
+    )
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name="match_stats",
+    )
+
+    # stat_period, stat_type, stat_name from API
+    period = models.CharField(
+        max_length=10,
+        choices=Period.choices,
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+    )
+    name = models.CharField(max_length=50)  # e.g. "1st Serve Points Won"
+
+    # Values from API
+    value_raw = models.CharField(
+        max_length=20, blank=True
+    )  # original "63%", "6", "0", etc.
+
+    # Parsed versions for easier querying
+    value_percent = models.FloatField(null=True, blank=True)  # 63.0
+    value_number = models.FloatField(null=True, blank=True)   # 6.0, 100.0, etc.
+
+    stat_won = models.IntegerField(null=True, blank=True)
+    stat_total = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("match", "player", "period", "category", "name")
+
+    def __str__(self):
+        return f"{self.match.key} - {self.player.name} - {self.period} - {self.name}: {self.value_raw}"

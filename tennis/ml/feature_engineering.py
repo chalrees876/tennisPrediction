@@ -5,8 +5,6 @@ from typing import Dict, Tuple, Optional, List
 
 from tennis.models import (
     PlayerMatch,
-    PlayerMatchServeStats,
-    PlayerMatchReturnStats,
 )
 
 try:
