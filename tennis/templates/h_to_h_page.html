@@ -40,7 +40,11 @@
         <div class="h2h-stat-value text-tennis-green">{{ player_wins }}</div>
         <div class="h2h-stat-label">Wins</div>
         <div class="h2h-win-percentage">
-          {% widthratio player_wins h2h_matches|length 100 %}% Win Rate
+          {% if h2h_matches|length > 0 %}
+            {% widthratio player_wins h2h_matches|length 100 %}% Win Rate
+          {% else %}
+            0% Win Rate
+          {% endif %}
         </div>
       </div>
     </div>
@@ -55,7 +59,11 @@
         <div class="h2h-stat-value text-tennis-blue">{{ opponent_wins }}</div>
         <div class="h2h-stat-label">Wins</div>
         <div class="h2h-win-percentage">
-          {% widthratio opponent_wins h2h_matches|length 100 %}% Win Rate
+          {% if h2h_matches|length > 0 %}
+            {% widthratio opponent_wins h2h_matches|length 100 %}% Win Rate
+          {% else %}
+            0% Win Rate
+          {% endif %}
         </div>
       </div>
     </div>
@@ -97,8 +105,6 @@
               <tr>
                 <th>Date</th>
                 <th>Tournament</th>
-                <th>Surface</th>
-                <th>Round</th>
                 <th>Winner</th>
                 <th>Score</th>
                 <th>Details</th>
@@ -116,29 +122,21 @@
                     <span class="tournament-badge-small">{{ match.tournament }}</span>
                   </td>
                   <td>
-                    {% if match.surface %}
-                      <span class="surface-badge">{{ match.surface }}</span>
+                    {% if match.winner == player %}
+                      <span class="win-badge">{{ player.name }}</span>
+                    {% elif match.winner == opponent %}
+                      <span class="loss-badge">{{ opponent.name }}</span>
                     {% else %}
                       <span class="text-muted">-</span>
                     {% endif %}
                   </td>
                   <td>
-                    <span class="round-badge">{{ match.round }}</span>
-                  </td>
-                  <td>
-                    {% if match.won %}
-                      <span class="win-badge">{{ match.player.name }}</span>
-                    {% else %}
-                      <span class="loss-badge">{{ match.opponent.name }}</span>
-                    {% endif %}
-                  </td>
-                  <td>
                     <span style="font-family: 'Courier New', monospace; font-weight: 600; color: var(--tennis-dark);">
-                      {{ match.score|default:"-" }}
+                      {{ match.winner_score_line|default:match.score_line|default:"-" }}
                     </span>
                   </td>
                   <td>
-                    <a href="{% url 'tennis:match_page' match.id %}" class="match-detail-btn">
+                    <a href="{% url 'tennis:match_page' match.pk %}" class="match-detail-btn">
                       View
                     </a>
                   </td>

@@ -24,11 +24,11 @@
               <div class="players-section mb-2">
                 <!-- Player 1 -->
                 <div class="d-flex align-items-center justify-content-center mb-2">
-                  <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.player.id %}">
-                    {{ m.match.player.name }}
+                  <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.first_player.pk %}">
+                    {{ m.match.first_player.name }}
                   </a>
-                  {% if m.match.player.ranking %}
-                    <span class="rank-badge-small ms-2">#{{ m.match.player.ranking }}</span>
+                  {% if m.match.first_player.ranking %}
+                    <span class="rank-badge-small ms-2">#{{ m.match.first_player.ranking }}</span>
                   {% endif %}
                 </div>
 
@@ -39,23 +39,23 @@
 
                 <!-- Player 2 -->
                 <div class="d-flex align-items-center justify-content-center mb-2">
-                  <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.opponent.id %}">
-                    {{ m.match.opponent.name }}
+                  <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.second_player.pk %}">
+                    {{ m.match.second_player.name }}
                   </a>
-                  {% if m.match.opponent.ranking %}
-                    <span class="rank-badge-small ms-2">#{{ m.match.opponent.ranking }}</span>
+                  {% if m.match.second_player.ranking %}
+                    <span class="rank-badge-small ms-2">#{{ m.match.second_player.ranking }}</span>
                   {% endif %}
                 </div>
               </div>
 
               <!-- Tournament Info -->
               <div class="tournament-badge mb-2">
-                {{ m.match.tournament }}
+                {{ m.match.tournament }} {{ m.match.date }} {{ m.match.time }}
               </div>
 
               <!-- H2H Button - Centered below tournament -->
               <div class="text-center">
-                <a class="btn h2h-btn" href="{% url 'tennis:h_to_h_page' m.match.id %}">
+                <a class="btn h2h-btn" href="{% url 'tennis:h_to_h_page' m.match.pk %}">
                   H2H Stats
                 </a>
               </div>
@@ -70,9 +70,9 @@
               <div class="d-flex justify-content-between align-items-center">
                 <div class="fw-bold">
                   {% if m.ens_prob >= 0.5 %}
-                    <span class="text-success">✓</span> {{ m.match.player.name }}
+                    <span class="text-success">✓</span> {{ m.match.first_player.name }}
                   {% else %}
-                    <span class="text-success">✓</span> {{ m.match.opponent.name }}
+                    <span class="text-success">✓</span> {{ m.match.second_player.name }}
                   {% endif %}
                 </div>
               </div>
@@ -132,7 +132,7 @@
               <div class="moneyline-header">Moneyline (No-Vig)</div>
               <div class="moneyline-row">
                 <div class="fw-medium">
-                  {{ m.match.player.name }}
+                  {{ m.match.first_player.name }}
                 </div>
                 <div class="fw-bold">
                   {% if m.ens_ml_p1|slice:":1" == "-" %}
@@ -144,7 +144,7 @@
               </div>
               <div class="moneyline-row">
                 <div class="fw-medium">
-                  {{ m.match.opponent.name }}
+                  {{ m.match.second_player.name }}
                 </div>
                 <div class="fw-bold">
                   {% if m.ens_ml_p2|slice:":1" == "-" %}

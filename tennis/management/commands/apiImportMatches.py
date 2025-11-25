@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Union, Tuple, List
 
 from django.core.management import BaseCommand
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--date-stop",
-            default=datetime.today().strftime("%Y-%m-%d"),
+            default=(datetime.today() + timedelta(days=90)).strftime("%Y-%m-%d"),
             help="End date for fixtures in YYYY-MM-DD",
         )
 
@@ -290,20 +290,8 @@ class Command(BaseCommand):
     @staticmethod
     def _build_score_line(scores: List[dict]) -> str:
         """
-        Convert scores array like:
-
-        [
-          {"score_first": "6", "score_second": "1", "score_set": "1"},
-          {"score_first": "6.5", "score_second": "7.7", "score_set": "2"},
-          {"score_first": "6", "score_second": "2", "score_set": "3"},
-          {"score_first": "6", "score_second": "1", "score_set": "4"}
-        ]
-
-        into something like:
-
-            "6-1 6-7(5) 6-2 6-1"
-
-        Tie-breaks are encoded as games.tiebreak_points, e.g. 6.5 vs 7.7 -> 6-7(5).
+        Convert scores array into something like "6-1 6-7(5) 6-2".
+        Skips placeholder sets like 0-0 0-0 0-0 that the API includes.
         """
 
         if not scores:
@@ -333,6 +321,10 @@ class Command(BaseCommand):
             g1, tb1 = split_score(sf_raw)
             g2, tb2 = split_score(ss_raw)
 
+            # --- skip placeholder sets like 0-0 ---
+            if g1 == 0 and g2 == 0 and tb1 is None and tb2 is None:
+                continue
+
             # No tiebreak encoded -> simple set like 6-3
             if tb1 is None and tb2 is None:
                 set_strings.append(f"{g1}-{g2}")
@@ -354,3 +346,4 @@ class Command(BaseCommand):
                 set_strings.append(f"{g1}-{g2}")
 
         return " ".join(set_strings)
+

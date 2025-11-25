@@ -4,12 +4,14 @@
     <div class="card-body">
       <!-- Match header - CENTERED -->
       <div class="match-header text-center mb-3">
-        <!-- Player names and VS badge -->
+        <!-- Player names and D. badge -->
         <div class="players-section mb-2">
-          {% if m.match.won %}
+          {% if m.match.winner == m.match.first_player %}
+            {# winner is first_player #}
             <div class="d-flex align-items-center justify-content-center mb-2">
-              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.player.id %}">
-                {{ m.match.player.name }}
+              <a class="player-link fs-5 fw-bold"
+                 href="{% url 'tennis:player_page' m.match.first_player.pk %}">
+                {{ m.match.first_player.name }}
               </a>
             </div>
 
@@ -18,14 +20,18 @@
             </div>
 
             <div class="d-flex align-items-center justify-content-center mb-2">
-              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.opponent.id %}">
-                {{ m.match.opponent.name }}
+              <a class="player-link fs-5 fw-bold"
+                 href="{% url 'tennis:player_page' m.match.second_player.pk %}">
+                {{ m.match.second_player.name }}
               </a>
             </div>
-          {% elif m.match.won == False %}
+
+          {% elif m.match.winner == m.match.second_player %}
+            {# winner is second_player #}
             <div class="d-flex align-items-center justify-content-center mb-2">
-              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.opponent.id %}">
-                {{ m.match.opponent.name }}
+              <a class="player-link fs-5 fw-bold"
+                 href="{% url 'tennis:player_page' m.match.second_player.pk %}">
+                {{ m.match.second_player.name }}
               </a>
             </div>
 
@@ -34,52 +40,78 @@
             </div>
 
             <div class="d-flex align-items-center justify-content-center mb-2">
-              <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.player.id %}">
-                {{ m.match.player.name }}
+              <a class="player-link fs-5 fw-bold"
+                 href="{% url 'tennis:player_page' m.match.first_player.pk %}">
+                {{ m.match.first_player.name }}
               </a>
             </div>
           {% endif %}
         </div>
 
-        <!-- Match Score -->
+        <!-- Match Score (winner perspective) -->
         <div class="match-score mb-2">
-          {{ m.match.score|default:"Score not available" }}
+          {{ m.match.winner_score_line|default:"Score not available" }}
         </div>
 
         <!-- Tournament Info -->
         <div class="tournament-badge">
-          {{ m.match.tournament }} • {{ m.match.date }}
+          {{ m.match.tournament.name }} • {{ m.match.date }}
         </div>
       </div>
 
       <hr class="divider">
 
-      <!-- Rest of your existing content remains the same -->
+      <!-- Predicted Winner -->
       <div class="text-center">Predicted Winner</div>
-      {% if m.match.won %}
-        <div class="winner-prediction">
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="fw-bold">
-              {% if m.ens_prob >= 0.5 %}
-                <span class="text-success">✓</span> {{ m.match.player.name }}
-              {% else %}
-                <span class="text-success">✓</span> {{ m.match.opponent.name }}
-              {% endif %}
+
+      {% comment %}
+        If ens_prob >= 0.5 -> model favors first_player
+        else -> model favors second_player
+
+        We compare that predicted player to the actual winner
+        to decide ✓ (correct) or x (wrong), independent of who was p1/p2.
+      {% endcomment %}
+
+      {% if m.ens_prob >= 0.5 %}
+        {% with predicted=m.match.first_player %}
+          {% if predicted == m.match.winner %}
+            <div class="winner-prediction">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <span class="text-success">✓</span> {{ predicted.name }}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      {% elif m.match.won == False %}
-        <div class="winner-prediction-wrong">
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="fw-bold">
-              {% if m.ens_prob >= 0.5 %}
-                <span class="text-danger">x</span> {{ m.match.player.name }}
-              {% else %}
-                <span class="text-danger">x</span> {{ m.match.opponent.name }}
-              {% endif %}
+          {% else %}
+            <div class="winner-prediction-wrong">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <span class="text-danger">x</span> {{ predicted.name }}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          {% endif %}
+        {% endwith %}
+      {% else %}
+        {% with predicted=m.match.second_player %}
+          {% if predicted == m.match.winner %}
+            <div class="winner-prediction">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <span class="text-success">✓</span> {{ predicted.name }}
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="winner-prediction-wrong">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-bold">
+                  <span class="text-danger">x</span> {{ predicted.name }}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
       {% endif %}
 
       <!-- Confidence meter -->
@@ -93,36 +125,41 @@
           {% endif %}
         </span>
       </div>
+
       <div class="confidence-meter">
         {% if m.ens_prob >= 0.5 %}
-          <div class="confidence-fill" style="width: {{ m.p1_pct }}%; background: linear-gradient(90deg,
-            {% if m.p1_pct >= 75 %}var(--tennis-green)
-            {% elif m.p1_pct >= 60 %}#4CAF50
-            {% elif m.p1_pct >= 55 %}#8BC34A
-            {% elif m.p1_pct >= 52 %}#CDDC39
-            {% else %}var(--tennis-orange)
-            {% endif %} 0%,
-            {% if m.p1_pct >= 75 %}var(--tennis-green)
-            {% elif m.p1_pct >= 60 %}#4CAF50
-            {% elif m.p1_pct >= 55 %}#8BC34A
-            {% elif m.p1_pct >= 52 %}#CDDC39
-            {% else %}var(--tennis-orange)
-            {% endif %} 100%);">
+          <div class="confidence-fill"
+               style="width: {{ m.p1_pct }}%;
+                      background: linear-gradient(90deg,
+                        {% if m.p1_pct >= 75 %}var(--tennis-green)
+                        {% elif m.p1_pct >= 60 %}#4CAF50
+                        {% elif m.p1_pct >= 55 %}#8BC34A
+                        {% elif m.p1_pct >= 52 %}#CDDC39
+                        {% else %}var(--tennis-orange)
+                        {% endif %} 0%,
+                        {% if m.p1_pct >= 75 %}var(--tennis-green)
+                        {% elif m.p1_pct >= 60 %}#4CAF50
+                        {% elif m.p1_pct >= 55 %}#8BC34A
+                        {% elif m.p1_pct >= 52 %}#CDDC39
+                        {% else %}var(--tennis-orange)
+                        {% endif %} 100%);">
           </div>
         {% else %}
-          <div class="confidence-fill" style="width: {{ m.p2_pct }}%; background: linear-gradient(90deg,
-            {% if m.p2_pct >= 75 %}var(--tennis-green)
-            {% elif m.p2_pct >= 60 %}#4CAF50
-            {% elif m.p2_pct >= 55 %}#8BC34A
-            {% elif m.p2_pct >= 52 %}#CDDC39
-            {% else %}var(--tennis-orange)
-            {% endif %} 0%,
-            {% if m.p2_pct >= 75 %}var(--tennis-green)
-            {% elif m.p2_pct >= 60 %}#4CAF50
-            {% elif m.p2_pct >= 55 %}#8BC34A
-            {% elif m.p2_pct >= 52 %}#CDDC39
-            {% else %}var(--tennis-orange)
-            {% endif %} 100%);">
+          <div class="confidence-fill"
+               style="width: {{ m.p2_pct }}%;
+                      background: linear-gradient(90deg,
+                        {% if m.p2_pct >= 75 %}var(--tennis-green)
+                        {% elif m.p2_pct >= 60 %}#4CAF50
+                        {% elif m.p2_pct >= 55 %}#8BC34A
+                        {% elif m.p2_pct >= 52 %}#CDDC39
+                        {% else %}var(--tennis-orange)
+                        {% endif %} 0%,
+                        {% if m.p2_pct >= 75 %}var(--tennis-green)
+                        {% elif m.p2_pct >= 60 %}#4CAF50
+                        {% elif m.p2_pct >= 55 %}#8BC34A
+                        {% elif m.p2_pct >= 52 %}#CDDC39
+                        {% else %}var(--tennis-orange)
+                        {% endif %} 100%);">
           </div>
         {% endif %}
       </div>
@@ -135,7 +172,7 @@
       <div class="moneyline-section">
         <div class="moneyline-header">Moneyline (No-Vig)</div>
         <div class="moneyline-row">
-          <div class="fw-medium">{{ m.match.player.name }}</div>
+          <div class="fw-medium">{{ m.match.first_player.name }}</div>
           <div class="fw-bold">
             {% if m.ens_ml_p1|slice:":1" == "-" %}
               {{ m.ens_ml_p1 }}
@@ -145,16 +182,17 @@
           </div>
         </div>
         <div class="moneyline-row">
-          <div class="fw-medium">{{ m.match.opponent.name }}</div>
+          <div class="fw-medium">{{ m.match.second_player.name }}</div>
           <div class="fw-bold">
             {% if m.ens_ml_p2|slice:":1" == "-" %}
               {{ m.ens_ml_p2 }}
             {% else %}
-              +{{ m.ens_ml_p2 }}
+              {{ m.ens_ml_p2 }}
             {% endif %}
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
