@@ -1,5 +1,5 @@
 # tennis/services/api_sync.py
-
+from pprint import pprint
 from typing import Tuple
 
 from tennis.models import Player, Tournament, PlayerMatch
@@ -18,7 +18,7 @@ def sync_matches_for_players(date_start: str, date_stop: str) -> Tuple[int, int]
     total_created = 0
     total_updated = 0
 
-    for player in Player.objects.all():
+    for player in Player.objects.filter(playerranking__league="ATP").order_by('-playerranking__ranking'):
         print(f"Syncing {player.name}...")
         events = client.get_fixtures_for_player(
             player_key=player.key,
@@ -28,6 +28,7 @@ def sync_matches_for_players(date_start: str, date_stop: str) -> Tuple[int, int]
         player_created = 0
         player_updated = 0
         for event in events:
+            pprint(event)
             match, created = upsert_match_from_api_event(event)
             if created:
                 total_created += 1

@@ -66,7 +66,7 @@ def upsert_match_from_api_event(event: Dict) -> Tuple[PlayerMatch, bool]:
             "first_player": p1,
             "second_player": p2,
             "winner": winner,
-            "event_type": event.get("event_type"),
+            "event_type": event.get("event_type_type"),
             "round": event.get("tournament_round"),
             "date": d,
             "time": t,
