@@ -3,9 +3,6 @@ from django.core import management
 from django.core.management import BaseCommand
 from django.db import transaction
 
-from tennis.models import PlayerMatch, MatchPrediction
-from tennis.ml.predictor import predict_for_match
-
 
 class Command(BaseCommand):
     help = "Master command to start project."
@@ -18,4 +15,4 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        management.call_command("sync_tennis_data", )
+        management.call_command("sync_tennis_data", days=5000, players=True, rankings=True)
