@@ -28,7 +28,6 @@ def sync_matches_for_players(date_start: str, date_stop: str) -> Tuple[int, int]
         player_created = 0
         player_updated = 0
         for event in events:
-            pprint(event)
             match, created = upsert_match_from_api_event(event)
             if created:
                 total_created += 1
