@@ -1,12 +1,14 @@
 import os
 from .settings_base import *
 import os
+from dotenv import load_dotenv
 
 def _csv(name, default=""):
     raw = os.getenv(name, default)
     # Return list, stripping whitespace and dropping empties
     return [x.strip() for x in raw.split(",") if x.strip()]
 
+load_dotenv(BASE_DIR/".env")
 
 import dj_database_url
 DATABASES = {
