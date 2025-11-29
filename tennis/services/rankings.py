@@ -10,7 +10,7 @@ def sync_rankings(tour: str):
     Sync ATP or WTA rankings without ever creating partial player names.
     """
     client = TennisAPIClient()
-    data = client.get_rankings(tour)
+    data = client.get_rankings()
 
     # wipe old
     PlayerRanking.objects.filter(tour=tour).delete()
