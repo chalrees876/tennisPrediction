@@ -1,6 +1,5 @@
 # TennisPredict
 
-**Live Site:** [https://tennisbetsmart.com](https://tennisbetsmart.com)  
 **Author:** [Christopher McKenzie](https://github.com/chalrees876)  
 
 TennisPredict is a full-stack machine learning web application that forecasts professional tennis match outcomes using historical player data and predictive modeling.  
