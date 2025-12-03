@@ -131,6 +131,8 @@ def completed_matches(request):
     )
 
 
+# tennis/views.py - UPDATED upcoming_matches function
+
 def upcoming_matches(request):
     from django.db.models import Q, OuterRef, Subquery, IntegerField
     from django.db.models.functions import Least
@@ -144,12 +146,13 @@ def upcoming_matches(request):
         player=OuterRef("second_player"),
     ).values("ranking")[:1]
 
-    # Get ALL upcoming matches, not just those with predictions
+    # Get ALL upcoming matches
     matches_qs = (
         PlayerMatch.objects
         .filter(
             winner__isnull=True,
-            date__gte=datetime.date.today()
+            date__gte=datetime.date.today(),
+            tournament__event_type_type="Atp Singles"
         )
         .annotate(
             first_rank=Subquery(first_rank_subq, output_field=IntegerField()),
@@ -161,7 +164,7 @@ def upcoming_matches(request):
             "first_player",
             "second_player"
         )
-        .prefetch_related("prediction")  # Use prefetch_related for OneToOne
+        .prefetch_related("prediction")
         .order_by("min_rank", "date", "time")
     )
 
@@ -202,17 +205,17 @@ def upcoming_matches(request):
                 }
             )
         else:
-            # Match without prediction - show placeholder
+            # Match without prediction - show with toss-up odds
             matches.append(
                 {
                     "match": match,
-                    "log_reg_prob": None,
-                    "rf_prob": None,
+                    "log_reg_prob": 0.5,
+                    "rf_prob": 0.5,
                     "ens_prob": 0.5,
-                    "log_reg_ml_p1": None,
-                    "log_reg_ml_p2": None,
-                    "rf_ml_p1": None,
-                    "rf_ml_p2": None,
+                    "log_reg_ml_p1": 0,
+                    "log_reg_ml_p2": 0,
+                    "rf_ml_p1": 0,
+                    "rf_ml_p2": 0,
                     "ens_ml_p1": 0,
                     "ens_ml_p2": 0,
                     "p1_pct": 50.0,
@@ -220,6 +223,7 @@ def upcoming_matches(request):
                     "has_prediction": False,
                 }
             )
+
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         matches_data = []
         for m in matches:
@@ -238,6 +242,7 @@ def upcoming_matches(request):
                     "p2_pct": m["p2_pct"],
                     "ens_ml_p1": m["ens_ml_p1"],
                     "ens_ml_p2": m["ens_ml_p2"],
+                    "has_prediction": m["has_prediction"],
                 }
             )
         return JsonResponse(

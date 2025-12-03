@@ -15,8 +15,15 @@
   <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for m in matches %}
       <div class="col">
-        <div class="card match-card h-100">
+        <div class="card match-card h-100 {% if not m.has_prediction %}low-confidence-match{% endif %}">
           <div class="card-body">
+
+            <!-- LOW CONFIDENCE BANNER -->
+            {% if not m.has_prediction %}
+            <div class="alert alert-warning py-2 px-3 mb-3" style="font-size: 0.85rem;">
+              <strong>⚠️ Limited Data</strong> - Showing toss-up prediction
+            </div>
+            {% endif %}
 
             <!-- Match header - CENTERED -->
             <div class="match-header text-center mb-3">
@@ -27,8 +34,8 @@
                   <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.first_player.pk %}">
                     {{ m.match.first_player.name }}
                   </a>
-                  {% if m.match.first_player.ranking %}
-                    <span class="rank-badge-small ms-2">#{{ m.match.first_player.ranking }}</span>
+                  {% if m.match.first_rank %}
+                    <span class="rank-badge-small ms-2">#{{ m.match.first_rank }}</span>
                   {% endif %}
                 </div>
 
@@ -42,15 +49,15 @@
                   <a class="player-link fs-5 fw-bold" href="{% url 'tennis:player_page' m.match.second_player.pk %}">
                     {{ m.match.second_player.name }}
                   </a>
-                  {% if m.match.second_player.ranking %}
-                    <span class="rank-badge-small ms-2">#{{ m.match.second_player.ranking }}</span>
+                  {% if m.match.second_rank %}
+                    <span class="rank-badge-small ms-2">#{{ m.match.second_rank }}</span>
                   {% endif %}
                 </div>
               </div>
 
               <!-- Tournament Info -->
               <div class="tournament-badge mb-2">
-                {{ m.match.tournament }} {{ m.match.date }} {{ m.match.time }}
+                {{ m.match.tournament }} • {{ m.match.date|date:"M d, Y" }} • {{ m.match.time|time:"g:i A" }}
               </div>
 
               <!-- H2H Button - Centered below tournament -->
@@ -64,70 +71,87 @@
             <hr class="divider">
 
             <!-- Predicted winner + probability -->
-            <div class="text-center">Predicted Winner</div>
+            {% if m.has_prediction %}
+              <div class="text-center">Predicted Winner</div>
 
-            <div class="winner-prediction">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="fw-bold">
-                  {% if m.ens_prob >= 0.5 %}
-                    <span class="text-success">✓</span> {{ m.match.first_player.name }}
-                  {% else %}
-                    <span class="text-success">✓</span> {{ m.match.second_player.name }}
-                  {% endif %}
+              <div class="winner-prediction">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="fw-bold">
+                    {% if m.ens_prob >= 0.5 %}
+                      <span class="text-success">✓</span> {{ m.match.first_player.name }}
+                    {% else %}
+                      <span class="text-success">✓</span> {{ m.match.second_player.name }}
+                    {% endif %}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Confidence meter with gradient -->
-            <div class="d-flex justify-content-between small mb-1">
-              <span>Win Percentage</span>
-              <span class="fw-semibold">
+              <!-- Confidence meter with gradient -->
+              <div class="d-flex justify-content-between small mb-1">
+                <span>Win Percentage</span>
+                <span class="fw-semibold">
+                  {% if m.ens_prob >= 0.5 %}
+                    {{ m.p1_pct|floatformat:1 }}%
+                  {% else %}
+                    {{ m.p2_pct|floatformat:1 }}%
+                  {% endif %}
+                </span>
+              </div>
+              <div class="confidence-meter">
                 {% if m.ens_prob >= 0.5 %}
-                  {{ m.p1_pct|floatformat:1 }}%
+                  <div class="confidence-fill" style="width: {{ m.p1_pct }}%; background: linear-gradient(90deg,
+                    {% if m.p1_pct >= 75 %}var(--tennis-green)
+                    {% elif m.p1_pct >= 60 %}#4CAF50
+                    {% elif m.p1_pct >= 55 %}#8BC34A
+                    {% elif m.p1_pct >= 52 %}#CDDC39
+                    {% else %}var(--tennis-orange)
+                    {% endif %} 0%,
+                    {% if m.p1_pct >= 75 %}var(--tennis-green)
+                    {% elif m.p1_pct >= 60 %}#4CAF50
+                    {% elif m.p1_pct >= 55 %}#8BC34A
+                    {% elif m.p1_pct >= 52 %}#CDDC39
+                    {% else %}var(--tennis-orange)
+                    {% endif %} 100%);">
+                  </div>
                 {% else %}
-                  {{ m.p2_pct|floatformat:1 }}%
+                  <div class="confidence-fill" style="width: {{ m.p2_pct }}%; background: linear-gradient(90deg,
+                    {% if m.p2_pct >= 75 %}var(--tennis-green)
+                    {% elif m.p2_pct >= 60 %}#4CAF50
+                    {% elif m.p2_pct >= 55 %}#8BC34A
+                    {% elif m.p2_pct >= 52 %}#CDDC39
+                    {% else %}var(--tennis-orange)
+                    {% endif %} 0%,
+                    {% if m.p2_pct >= 75 %}var(--tennis-green)
+                    {% elif m.p2_pct >= 60 %}#4CAF50
+                    {% elif m.p2_pct >= 55 %}#8BC34A
+                    {% elif m.p2_pct >= 52 %}#CDDC39
+                    {% else %}var(--tennis-orange)
+                    {% endif %} 100%);">
+                  </div>
                 {% endif %}
-              </span>
-            </div>
-            <div class="confidence-meter">
-              {% if m.ens_prob >= 0.5 %}
-                <div class="confidence-fill" style="width: {{ m.p1_pct }}%; background: linear-gradient(90deg,
-                  {% if m.p1_pct >= 75 %}var(--tennis-green)
-                  {% elif m.p1_pct >= 60 %}#4CAF50
-                  {% elif m.p1_pct >= 55 %}#8BC34A
-                  {% elif m.p1_pct >= 52 %}#CDDC39
-                  {% else %}var(--tennis-orange)
-                  {% endif %} 0%,
-                  {% if m.p1_pct >= 75 %}var(--tennis-green)
-                  {% elif m.p1_pct >= 60 %}#4CAF50
-                  {% elif m.p1_pct >= 55 %}#8BC34A
-                  {% elif m.p1_pct >= 52 %}#CDDC39
-                  {% else %}var(--tennis-orange)
-                  {% endif %} 100%);">
-                </div>
-              {% else %}
-                <div class="confidence-fill" style="width: {{ m.p2_pct }}%; background: linear-gradient(90deg,
-                  {% if m.p2_pct >= 75 %}var(--tennis-green)
-                  {% elif m.p2_pct >= 60 %}#4CAF50
-                  {% elif m.p2_pct >= 55 %}#8BC34A
-                  {% elif m.p2_pct >= 52 %}#CDDC39
-                  {% else %}var(--tennis-orange)
-                  {% endif %} 0%,
-                  {% if m.p2_pct >= 75 %}var(--tennis-green)
-                  {% elif m.p2_pct >= 60 %}#4CAF50
-                  {% elif m.p2_pct >= 55 %}#8BC34A
-                  {% elif m.p2_pct >= 52 %}#CDDC39
-                  {% else %}var(--tennis-orange)
-                  {% endif %} 100%);">
-                </div>
-              {% endif %}
-            </div>
-            <div class="confidence-label">
-              <span>50% (Toss-up)</span>
-              <span>100% (Certain)</span>
-            </div>
+              </div>
+              <div class="confidence-label">
+                <span>50% (Toss-up)</span>
+                <span>100% (Certain)</span>
+              </div>
+            {% else %}
+              <!-- Show toss-up for matches without predictions -->
+              <div class="text-center text-muted">
+                <div class="mb-2">Insufficient Data for Prediction</div>
+                <div class="small opacity-75">Both players have equal odds</div>
+              </div>
+
+              <div class="confidence-meter mt-3">
+                <div class="confidence-fill" style="width: 50%; background: #9E9E9E;"></div>
+              </div>
+              <div class="confidence-label">
+                <span>{{ m.match.first_player.name }}</span>
+                <span>{{ m.match.second_player.name }}</span>
+              </div>
+            {% endif %}
 
             <!-- Moneylines (both players) -->
+            {% if m.has_prediction %}
             <div class="moneyline-section">
               <div class="moneyline-header">Moneyline (No-Vig)</div>
               <div class="moneyline-row">
@@ -155,6 +179,19 @@
                 </div>
               </div>
             </div>
+            {% else %}
+            <div class="moneyline-section">
+              <div class="moneyline-header">Moneyline (Toss-up)</div>
+              <div class="moneyline-row">
+                <div class="fw-medium">{{ m.match.first_player.name }}</div>
+                <div class="fw-bold text-muted">EVEN</div>
+              </div>
+              <div class="moneyline-row">
+                <div class="fw-medium">{{ m.match.second_player.name }}</div>
+                <div class="fw-bold text-muted">EVEN</div>
+              </div>
+            </div>
+            {% endif %}
 
           </div>
         </div>
@@ -175,5 +212,17 @@
     <p class="text-muted">Check back later for new predictions!</p>
   </div>
 {% endif %}
+
+<style>
+.low-confidence-match {
+  border-left: 3px solid #ff9800;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+</style>
 
 {% endblock %}
