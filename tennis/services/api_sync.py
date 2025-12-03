@@ -28,15 +28,18 @@ def sync_matches_for_players(date_start: str, date_stop: str) -> Tuple[int, int]
         player_created = 0
         player_updated = 0
         for event in events:
-            match, created = upsert_match_from_api_event(event)
-            if created:
-                total_created += 1
-                player_created += 1
-                print(f"created {match}")
-            else:
-                total_updated += 1
-                player_updated += 1
-                print(f"updated {match}")
+            try:
+                match, created = upsert_match_from_api_event(event)
+                if created:
+                    total_created += 1
+                    player_created += 1
+                    print(f"created {match}")
+                else:
+                    total_updated += 1
+                    player_updated += 1
+                    print(f"updated {match}")
+            except Exception as e:
+                print(f"failed to upsert {event},  error: {e}")
         print(f"Matches: {player_created} created, {player_updated} updated")
 
     return total_created, total_updated

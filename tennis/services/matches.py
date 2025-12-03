@@ -15,7 +15,6 @@ def upsert_match_from_api_event(event: Dict) -> Tuple[PlayerMatch, bool]:
     """
     Take a single api-tennis event dict and upsert Tournament, two Players, and a PlayerMatch.
     """
-
     # --- Tournament ---
     tournament, _ = Tournament.objects.update_or_create(
         tournament_key=event["tournament_key"],
