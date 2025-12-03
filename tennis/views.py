@@ -136,7 +136,6 @@ def upcoming_matches(request):
         player=OuterRef("first_player"),
     ).values("ranking")[:1]
 
-    # Subquery for second player's ranking
     second_rank_subq = PlayerRanking.objects.filter(
         player=OuterRef("second_player"),
     ).values("ranking")[:1]
@@ -150,7 +149,7 @@ def upcoming_matches(request):
             min_rank=Least("first_rank", "second_rank"),
         )
         .select_related("tournament", "first_player", "second_player")
-        .prefetch_related("prediction")
+        .prefetch_related("prediction")  # This prefetches predictions
         .order_by("min_rank", "date", "time")
     )
 
@@ -164,8 +163,45 @@ def upcoming_matches(request):
 
     matches = []
     for match in matches_page:
-        pred: MatchPrediction = getattr(match, "prediction", None)
+        # IMPORTANT: When using prefetch_related, we need to check if
+        # the prediction exists in the prefetched queryset
+        # The prediction might be accessible as match.prediction_set.first()
+        # or just match.prediction if you have a OneToOne relationship
+
+        # Try different ways to get the prediction
+        pred = None
+
+        # Method 1: Direct attribute (for OneToOneField)
+        if hasattr(match, 'prediction'):
+            pred = match.prediction
+
+        # Method 2: Through related manager (for ForeignKey)
+        elif hasattr(match, 'prediction_set'):
+            pred = match.prediction_set.first()
+
+        # Method 3: Query directly if prefetch didn't work
+        if pred is None:
+            pred = MatchPrediction.objects.filter(match=match).first()
+
         if not pred:
+            # Instead of skipping, show match without prediction details
+            matches.append(
+                {
+                    "match": match,
+                    "log_reg_prob": None,
+                    "rf_prob": None,
+                    "ens_prob": 0.5,  # Default 50/50
+                    "log_reg_ml_p1": None,
+                    "log_reg_ml_p2": None,
+                    "rf_ml_p1": None,
+                    "rf_ml_p2": None,
+                    "ens_ml_p1": 0,  # Even money
+                    "ens_ml_p2": 0,  # Even money
+                    "p1_pct": 50.0,  # 50%
+                    "p2_pct": 50.0,  # 50%
+                    "has_prediction": False,
+                }
+            )
             continue
 
         ens_prob = pred.ens_prob
@@ -186,6 +222,7 @@ def upcoming_matches(request):
                 "ens_ml_p2": pred.ens_ml_p2,
                 "p1_pct": p1_pct,
                 "p2_pct": p2_pct,
+                "has_prediction": True,
             }
         )
 
