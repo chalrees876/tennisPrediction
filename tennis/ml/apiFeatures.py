@@ -132,10 +132,8 @@ def get_recent_stats_for_player(
             return features
         else:
             # We'll fall back to career stats, but keep what we have
-            recent_features = features.copy()
             features["__stats_source"] = "mixed_recent_insufficient"
     else:
-        recent_features = {}
         features["__stats_source"] = "none_recent"
 
     # FALLBACK: Get career averages for this player
@@ -186,10 +184,60 @@ def get_recent_stats_for_player(
     else:
         # No stats at all - use default values for key metrics
         features["__stats_source"] = "defaults"
-        return {}
+        return get_default_player_stats()  # Add this function below
 
     return features
 
+
+def get_default_player_stats() -> Dict[str, float]:
+    """
+    Return default/placeholder statistics for players with no match history.
+    These are ATP tour averages that can serve as reasonable defaults.
+    """
+    # ATP Tour averages (approximate)
+    defaults = {
+        # Service stats
+        "Service__Aces__avg_number": 5.0,
+        "Service__Aces__count": 1.0,
+        "Service__Double_Faults__avg_number": 3.0,
+        "Service__Double_Faults__count": 1.0,
+        "Service__1st_Serve__avg_percent": 62.0,
+        "Service__1st_Serve__count": 1.0,
+        "Service__1st_Serve_Points_Won__avg_percent": 72.0,
+        "Service__1st_Serve_Points_Won__count": 1.0,
+        "Service__2nd_Serve_Points_Won__avg_percent": 52.0,
+        "Service__2nd_Serve_Points_Won__count": 1.0,
+        "Service__Break_Points_Faced__avg_number": 5.0,
+        "Service__Break_Points_Faced__count": 1.0,
+        "Service__Break_Points_Saved__avg_percent": 60.0,
+        "Service__Break_Points_Saved__count": 1.0,
+        "Service__Service_Games_Played__avg_number": 10.0,
+        "Service__Service_Games_Played__count": 1.0,
+        "Service__Service_Points_Won__avg_percent": 65.0,
+        "Service__Service_Points_Won__count": 1.0,
+
+        # Return stats
+        "Return__1st_Serve_Return_Points_Won__avg_percent": 33.0,
+        "Return__1st_Serve_Return_Points_Won__count": 1.0,
+        "Return__2nd_Serve_Return_Points_Won__avg_percent": 52.0,
+        "Return__2nd_Serve_Return_Points_Won__count": 1.0,
+        "Return__Break_Points_Opportunities__avg_number": 5.0,
+        "Return__Break_Points_Opportunities__count": 1.0,
+        "Return__Break_Points_Converted__avg_percent": 40.0,
+        "Return__Break_Points_Converted__count": 1.0,
+        "Return__Return_Games_Played__avg_number": 10.0,
+        "Return__Return_Games_Played__count": 1.0,
+        "Return__Return_Points_Won__avg_percent": 38.0,
+        "Return__Return_Points_Won__count": 1.0,
+
+        # Points stats
+        "Points__Total_Points_Won__avg_percent": 50.0,
+        "Points__Total_Points_Won__count": 1.0,
+
+        # Metadata
+        "__stats_source": "defaults",
+    }
+    return defaults
 def get_odds_features(match):
     """
         Extract simple pre-match odds features from match.odds_raw.
