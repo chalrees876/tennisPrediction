@@ -3,6 +3,7 @@
 from django.core.management import BaseCommand
 from django.db import transaction
 import datetime
+from datetime import date
 
 from tennis.models import PlayerMatch, MatchPrediction
 from tennis.ml.predictor import predict_for_match
@@ -25,7 +26,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        qs = PlayerMatch.objects.filter(tournament__event_type_type="Atp Singles")
+        qs = PlayerMatch.objects.filter(tournament__event_type_type__in=["Atp Singles", "Itf Men Singles", "Itf Men - Singles"])
         if options["only_missing"]:
             qs = qs.filter(prediction__isnull=True)
 
@@ -33,7 +34,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Computing predictions for {total} matches...")
 
         # Count upcoming vs completed
-        upcoming = qs.filter(winner__isnull=True, date__gte=datetime.date.today()).count()
+        upcoming = qs.filter(date__gte=date.today()).count()
         completed = qs.filter(winner__isnull=False).count()
         self.stdout.write(f"  - Upcoming matches: {upcoming}")
         self.stdout.write(f"  - Completed matches: {completed}")

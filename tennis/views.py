@@ -152,7 +152,7 @@ def upcoming_matches(request):
         .filter(
             winner__isnull=True,
             date__gte=datetime.date.today(),
-            tournament__event_type_type="Atp Singles"
+            tournament__event_type_type__in=["Atp Singles", "Itf Men Singles", "Itf Men - Singles"]
         )
         .annotate(
             first_rank=Subquery(first_rank_subq, output_field=IntegerField()),
