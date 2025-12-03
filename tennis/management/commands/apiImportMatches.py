@@ -29,6 +29,24 @@ class Command(BaseCommand):
             default=(datetime.today() + timedelta(days=90)).strftime("%Y-%m-%d"),
             help="End date for fixtures in YYYY-MM-DD",
         )
+        parser.add_argument(
+            "--start-rank",
+            type=int,
+            default=None,
+            help="Starting rank for player filter (e.g., 1)",
+        )
+        parser.add_argument(
+            "--end-rank",
+            type=int,
+            default=None,
+            help="Ending rank for player filter (e.g., 100)",
+        )
+        parser.add_argument(
+            "--league",
+            default="ATP",
+            choices=["ATP", "WTA"],
+            help="League to filter rankings (ATP or WTA)",
+        )
 
     def handle(self, *args, **options):
         load_dotenv()
@@ -39,36 +57,48 @@ class Command(BaseCommand):
 
         date_start = options["date_start"]
         date_stop = options["date_stop"]
+        start_rank = options.get("start_rank")
+        end_rank = options.get("end_rank")
+        league = options["league"]
 
-        all_players = Player.objects.all()
+        if start_rank and end_rank:
+            # Filter by ranking range
+            players = Player.objects.filter(
+                playerranking__league=league,
+                playerranking__ranking__gte=start_rank,
+                playerranking__ranking__lte=end_rank,
+            ).distinct()
+        else:
 
-        for player in all_players:
-            url = (
-                "https://api.api-tennis.com/tennis/"
-                f"?method=get_fixtures&APIkey={api_key}"
-                f"&date_start={date_start}&date_stop={date_stop}"
-                f"&player_key={player.key}"
-            )
+            all_players = Player.objects.all()
 
-            self.stdout.write(f"Fetching fixtures for {player.name} ({player.key})")
-            try:
-                resp = requests.get(url, timeout=30)
-                resp.raise_for_status()
-                data = resp.json()
-            except Exception as e:
-                self.stderr.write(self.style.ERROR(f"Request error: {e}"))
-                continue
+            for player in all_players:
+                url = (
+                    "https://api.api-tennis.com/tennis/"
+                    f"?method=get_fixtures&APIkey={api_key}"
+                    f"&date_start={date_start}&date_stop={date_stop}"
+                    f"&player_key={player.key}"
+                )
 
-            events = data.get("result") or []
-            for event in events:
+                self.stdout.write(f"Fetching fixtures for {player.name} ({player.key})")
                 try:
-                    self._upsert_match_from_event(event)
+                    resp = requests.get(url, timeout=30)
+                    resp.raise_for_status()
+                    data = resp.json()
                 except Exception as e:
-                    self.stderr.write(
-                        self.style.ERROR(
-                            f"Failed to import event {event.get('event_key')}: {e}"
+                    self.stderr.write(self.style.ERROR(f"Request error: {e}"))
+                    continue
+
+                events = data.get("result") or []
+                for event in events:
+                    try:
+                        self._upsert_match_from_event(event)
+                    except Exception as e:
+                        self.stderr.write(
+                            self.style.ERROR(
+                                f"Failed to import event {event.get('event_key')}: {e}"
+                            )
                         )
-                    )
 
     @transaction.atomic
     def _upsert_match_from_event(self, event: dict):
