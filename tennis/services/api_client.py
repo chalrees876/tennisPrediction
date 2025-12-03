@@ -16,20 +16,23 @@ class TennisAPIClient:
         self.session = session or requests.Session()
 
     def _get(self, **params) -> List[Dict[str, Any]]:
-        full_params = {
-            "APIkey": self.api_key,
-            **params,
-        }
-        resp = self.session.get(self.BASE_URL, params=full_params, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        if not data.get("success"):
-            raise RuntimeError(f"Tennis API error: {data}")
-        result = data.get("result") or []
-        if isinstance(result, dict):
-            # some endpoints return dict keyed by id
-            return list(result.values())
-        return result
+        try:
+            full_params = {
+                "APIkey": self.api_key,
+                **params,
+            }
+            resp = self.session.get(self.BASE_URL, params=full_params, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            if not data.get("success"):
+                raise RuntimeError(f"Tennis API error: {data}")
+            result = data.get("result") or []
+            if isinstance(result, dict):
+                # some endpoints return dict keyed by id
+                return list(result.values())
+            return result
+        except requests.HTTPError as e:
+            raise RuntimeError(f"Tennis API error: {e}")
 
     # ---- Matches / fixtures by date range ----
     def get_events_by_date_range(self, date_start: str, date_stop: str) -> List[Dict[str, Any]]:

@@ -7,7 +7,7 @@ from tennis.services.api_client import TennisAPIClient
 from tennis.services.matches import upsert_match_from_api_event
 
 
-def sync_matches_for_players(date_start: str, date_stop: str) -> Tuple[int, int]:
+def sync_matches_for_players(date_start: str, date_stop: str, maxranking: int = 1, minranking: int = 100000) -> Tuple[int, int]:
     """
     Loop over *all players* in our DB, call fixtures API for each player,
     and upsert matches.
@@ -18,7 +18,7 @@ def sync_matches_for_players(date_start: str, date_stop: str) -> Tuple[int, int]
     total_created = 0
     total_updated = 0
 
-    for player in Player.objects.filter(playerranking__league="ATP", playerranking__ranking__gte=238).order_by('playerranking__ranking'):
+    for player in Player.objects.filter(playerranking__league="ATP", playerranking__ranking__gte=minranking, playerranking__ranking__lte=maxranking).order_by('playerranking__ranking'):
         print(f"Syncing {player.name}...")
         events = client.get_fixtures_for_player(
             player_key=player.key,

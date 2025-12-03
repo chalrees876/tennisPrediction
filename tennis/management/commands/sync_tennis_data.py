@@ -26,6 +26,19 @@ class Command(BaseCommand):
             action="store_true",
             help="Also sync ATP/WTA rankings.",
         )
+
+        parser.add_argument(
+            "--maxranking",
+            type=int,
+            default=100000
+        )
+
+        parser.add_argument(
+            "--minranking",
+            type=int,
+            default=1
+        )
+
         parser.add_argument(
             "--players",
             action="store_true",
@@ -34,6 +47,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opt):
         days = opt["days"]
+        maxranking = opt["maxranking"]
+        minranking = opt["minranking"]
+
         today = timezone.localdate()
 
         date_start = (today - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -53,7 +69,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Syncing matches between {date_start} and {date_stop}…")
 
-        created, updated = sync_matches_for_players(date_start, date_stop)
+        created, updated = sync_matches_for_players(date_start, date_stop, maxranking=maxranking, minranking=minranking)
         self.stdout.write(f"Matches: {created} created, {updated} updated")
 
         # ---- Sync odds for tournaments ----
