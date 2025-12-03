@@ -101,6 +101,7 @@ def completed_matches(request):
                     "tournament": str(match_obj.tournament),
                     "score": match_obj.score_line,
                     "date": match_obj.date.strftime("%Y-%m-%d"),
+                    "won": match_obj.winner == match_obj.first_player,  # ← ADD THIS LINE
                     "ens_prob": m["ens_prob"],
                     "p1_pct": m["p1_pct"],
                     "p2_pct": m["p2_pct"],

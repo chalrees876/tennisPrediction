@@ -194,17 +194,17 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
 
           <!-- Moneylines -->
-          <div class="moneyline-section">
-            <div class="moneyline-header">Moneyline (No-Vig)</div>
-            <div class="moneyline-row">
-              <div class="fw-medium">${match.player1_name}</div>
-              <div class="fw-bold">${match.ens_ml_p1.startsWith('-') ? match.ens_ml_p1 : '+' + match.ens_ml_p1}</div>
+            <div class="moneyline-section">
+              <div class="moneyline-header">Moneyline (No-Vig)</div>
+              <div class="moneyline-row">
+                <div class="fw-medium">${match.player1_name}</div>
+                <div class="fw-bold">${match.ens_ml_p1 < 0 ? match.ens_ml_p1 : '+' + match.ens_ml_p1}</div>
+              </div>
+              <div class="moneyline-row">
+                <div class="fw-medium">${match.player2_name}</div>
+                <div class="fw-bold">${match.ens_ml_p2 < 0 ? match.ens_ml_p2 : '+' + match.ens_ml_p2}</div>
+              </div>
             </div>
-            <div class="moneyline-row">
-              <div class="fw-medium">${match.player2_name}</div>
-              <div class="fw-bold">${match.ens_ml_p2.startsWith('-') ? match.ens_ml_p2 : '+' + match.ens_ml_p2}</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
