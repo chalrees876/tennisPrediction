@@ -63,10 +63,11 @@ def build_match_features(
 
     return features
 
+
 def get_recent_stats_for_player(
-    player: Player,
-    as_of_match: PlayerMatch,
-    n: int = 10,
+        player: Player,
+        as_of_match: PlayerMatch,
+        n: int = 10,
 ) -> Dict[str, float]:
     """
     Aggregate last N matches for a player BEFORE a given match.
@@ -75,9 +76,10 @@ def get_recent_stats_for_player(
       Service__Aces__count
       Service__1st_Serve_Points_Won__avg_percent
       ...
-    """
 
-    # 1) recent matches BEFORE this match (date + time)
+    Includes fallback to career averages if recent stats are insufficient.
+    """
+    # First, try to get recent matches with stats
     recent_matches = (
         PlayerMatch.objects
         .filter(
@@ -87,42 +89,104 @@ def get_recent_stats_for_player(
         .order_by("-date", "-time")[:n]
     )
 
-    if not recent_matches:
-        return {}
+    features: Dict[str, float] = {}
 
-    # 2) match-period stats for this player over those matches
-    stats_qs = (
+    # Get stats from recent matches (last n matches)
+    if recent_matches:
+        stats_qs = (
+            MatchStatistic.objects
+            .filter(
+                match__in=recent_matches,
+                player=player,
+            )
+            .values("category", "name")
+            .annotate(
+                avg_percent=Avg("value_percent"),
+                avg_number=Avg("value_number"),
+                count=Count("id"),
+            )
+        )
+
+        recent_stat_count = 0
+        for row in stats_qs:
+            recent_stat_count += 1
+            cat = row["category"]
+            name = row["name"]
+            avg_pct = row["avg_percent"]
+            avg_num = row["avg_number"]
+            cnt = row["count"]
+
+            base = f"{cat}__{name}".replace(" ", "_")
+
+            if avg_pct is not None:
+                features[f"{base}__avg_percent"] = avg_pct
+            if avg_num is not None:
+                features[f"{base}__avg_number"] = avg_num
+
+            # Sample size info
+            features[f"{base}__count"] = float(cnt)
+
+        # If we have sufficient recent stats, return them
+        if recent_stat_count >= 5:  # Adjust threshold as needed
+            features["__stats_source"] = "recent"  # Metadata for debugging
+            return features
+        else:
+            # We'll fall back to career stats, but keep what we have
+            recent_features = features.copy()
+            features["__stats_source"] = "mixed_recent_insufficient"
+    else:
+        recent_features = {}
+        features["__stats_source"] = "none_recent"
+
+    # FALLBACK: Get career averages for this player
+    career_stats = (
         MatchStatistic.objects
         .filter(
-            match__in=recent_matches,
             player=player,
+            # Optional: exclude matches after the current match date
+            match__date__lt=as_of_match.date,
         )
         .values("category", "name")
         .annotate(
             avg_percent=Avg("value_percent"),
             avg_number=Avg("value_number"),
-            count=Count("id"),
+            total_count=Count("id"),
         )
+        .order_by("category", "name")
     )
 
-    features: Dict[str, float] = {}
-
-    for row in stats_qs:
-        cat = row["category"]          # e.g. "Service"
-        name = row["name"]             # e.g. "1st Serve Points Won"
+    career_stat_count = 0
+    for row in career_stats:
+        career_stat_count += 1
+        cat = row["category"]
+        name = row["name"]
         avg_pct = row["avg_percent"]
         avg_num = row["avg_number"]
-        cnt = row["count"]
+        total_cnt = row["total_count"]
 
         base = f"{cat}__{name}".replace(" ", "_")
 
-        if avg_pct is not None:
+        # Only fill in missing features from recent matches
+        if f"{base}__avg_percent" not in features and avg_pct is not None:
             features[f"{base}__avg_percent"] = avg_pct
-        if avg_num is not None:
+
+        if f"{base}__avg_number" not in features and avg_num is not None:
             features[f"{base}__avg_number"] = avg_num
 
-        # sample size info
-        features[f"{base}__count"] = float(cnt)
+        # Use total count for career stats
+        if f"{base}__count" not in features:
+            features[f"{base}__count"] = float(total_cnt)
+
+    # If we have some career stats, mark the source
+    if career_stat_count > 0:
+        if "__stats_source" in features and features["__stats_source"].startswith("mixed"):
+            features["__stats_source"] = "mixed_with_career"
+        elif "__stats_source" in features and features["__stats_source"] == "none_recent":
+            features["__stats_source"] = "career_only"
+    else:
+        # No stats at all - use default values for key metrics
+        features["__stats_source"] = "defaults"
+        return {}
 
     return features
 
