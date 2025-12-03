@@ -17,9 +17,9 @@ class Command(BaseCommand):
             help="Only compute predictions for matches without predictions.",
         )
 
-    @transaction.atomic
     def handle(self, *args, **options):
-        qs = PlayerMatch.objects.filter(tournament__event_type_type="Atp Singles")
+        qs = (PlayerMatch.objects.filter(tournament__event_type_type="Atp Singles")
+              .select_related("tournament", "first_player", "second_player"))
         if options["only_missing"]:
             qs = qs.filter(prediction__isnull=True)
 

@@ -124,7 +124,7 @@ class Command(BaseCommand):
 
         url = (
             "https://api.api-tennis.com/tennis/"
-            f"?method=get_odds&APIkey={api_key}&tournament_key={tournament_key}&date_start=1800-01-01&date_stop={datetime.date.today()}"
+            f"?method=get_odds&APIkey={api_key}&tournament_key={tournament_key}&date_start=1800-01-01&date_stop=2040-01-01"
         )
 
         try:
