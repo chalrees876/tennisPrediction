@@ -8,4 +8,4 @@ class Command(BaseCommand):
     help = "Master command to start project."
 
     def handle(self, *args, **options):
-        management.call_command("sync_tennis_data", days=5000, rankings=True)
+        management.call_command("sync_tennis_data", days=30, rankings=True)
