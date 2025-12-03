@@ -132,6 +132,10 @@ def completed_matches(request):
 
 
 def upcoming_matches(request):
+    from django.db.models import Q, OuterRef, Subquery, IntegerField
+    from django.db.models.functions import Least
+    import datetime
+
     first_rank_subq = PlayerRanking.objects.filter(
         player=OuterRef("first_player"),
     ).values("ranking")[:1]
@@ -140,16 +144,24 @@ def upcoming_matches(request):
         player=OuterRef("second_player"),
     ).values("ranking")[:1]
 
+    # Get ALL upcoming matches, not just those with predictions
     matches_qs = (
         PlayerMatch.objects
-        .filter(winner__isnull=True, date__gte=datetime.date.today())
+        .filter(
+            winner__isnull=True,
+            date__gte=datetime.date.today()
+        )
         .annotate(
             first_rank=Subquery(first_rank_subq, output_field=IntegerField()),
             second_rank=Subquery(second_rank_subq, output_field=IntegerField()),
             min_rank=Least("first_rank", "second_rank"),
         )
-        .select_related("tournament", "first_player", "second_player")
-        .prefetch_related("prediction")  # This prefetches predictions
+        .select_related(
+            "tournament",
+            "first_player",
+            "second_player"
+        )
+        .prefetch_related("prediction")  # Use prefetch_related for OneToOne
         .order_by("min_rank", "date", "time")
     )
 
@@ -163,69 +175,51 @@ def upcoming_matches(request):
 
     matches = []
     for match in matches_page:
-        # IMPORTANT: When using prefetch_related, we need to check if
-        # the prediction exists in the prefetched queryset
-        # The prediction might be accessible as match.prediction_set.first()
-        # or just match.prediction if you have a OneToOne relationship
+        # Try to get prediction
+        pred = getattr(match, 'prediction', None)
 
-        # Try different ways to get the prediction
-        pred = None
+        if pred:
+            # Match has prediction
+            ens_prob = pred.ens_prob
+            p1_pct = round(ens_prob * 100, 1)
+            p2_pct = round((1.0 - ens_prob) * 100, 1)
 
-        # Method 1: Direct attribute (for OneToOneField)
-        if hasattr(match, 'prediction'):
-            pred = match.prediction
-
-        # Method 2: Through related manager (for ForeignKey)
-        elif hasattr(match, 'prediction_set'):
-            pred = match.prediction_set.first()
-
-        # Method 3: Query directly if prefetch didn't work
-        if pred is None:
-            pred = MatchPrediction.objects.filter(match=match).first()
-
-        if not pred:
-            # Instead of skipping, show match without prediction details
+            matches.append(
+                {
+                    "match": match,
+                    "log_reg_prob": pred.log_reg_prob,
+                    "rf_prob": pred.rf_prob,
+                    "ens_prob": ens_prob,
+                    "log_reg_ml_p1": pred.log_reg_ml_p1,
+                    "log_reg_ml_p2": pred.log_reg_ml_p2,
+                    "rf_ml_p1": pred.rf_ml_p1,
+                    "rf_ml_p2": pred.rf_ml_p2,
+                    "ens_ml_p1": pred.ens_ml_p1,
+                    "ens_ml_p2": pred.ens_ml_p2,
+                    "p1_pct": p1_pct,
+                    "p2_pct": p2_pct,
+                    "has_prediction": True,
+                }
+            )
+        else:
+            # Match without prediction - show placeholder
             matches.append(
                 {
                     "match": match,
                     "log_reg_prob": None,
                     "rf_prob": None,
-                    "ens_prob": 0.5,  # Default 50/50
+                    "ens_prob": 0.5,
                     "log_reg_ml_p1": None,
                     "log_reg_ml_p2": None,
                     "rf_ml_p1": None,
                     "rf_ml_p2": None,
-                    "ens_ml_p1": 0,  # Even money
-                    "ens_ml_p2": 0,  # Even money
-                    "p1_pct": 50.0,  # 50%
-                    "p2_pct": 50.0,  # 50%
+                    "ens_ml_p1": 0,
+                    "ens_ml_p2": 0,
+                    "p1_pct": 50.0,
+                    "p2_pct": 50.0,
                     "has_prediction": False,
                 }
             )
-            continue
-
-        ens_prob = pred.ens_prob
-        p1_pct = round(ens_prob * 100, 1)
-        p2_pct = round((1.0 - ens_prob) * 100, 1)
-
-        matches.append(
-            {
-                "match": match,
-                "log_reg_prob": pred.log_reg_prob,
-                "rf_prob": pred.rf_prob,
-                "ens_prob": ens_prob,
-                "log_reg_ml_p1": pred.log_reg_ml_p1,
-                "log_reg_ml_p2": pred.log_reg_ml_p2,
-                "rf_ml_p1": pred.rf_ml_p1,
-                "rf_ml_p2": pred.rf_ml_p2,
-                "ens_ml_p1": pred.ens_ml_p1,
-                "ens_ml_p2": pred.ens_ml_p2,
-                "p1_pct": p1_pct,
-                "p2_pct": p2_pct,
-                "has_prediction": True,
-            }
-        )
-
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         matches_data = []
         for m in matches:
