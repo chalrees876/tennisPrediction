@@ -26,7 +26,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        qs = PlayerMatch.objects.filter(tournament__event_type_type__in=["Atp Singles", "Itf Men Singles", "Itf Men - Singles"])
+        qs = PlayerMatch.objects.filter(tournament__event_type_type__in=["Atp Singles"])
         if options["only_missing"]:
             qs = qs.filter(prediction__isnull=True)
 
