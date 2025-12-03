@@ -168,10 +168,12 @@ class Command(BaseCommand):
             try:
                 match = PlayerMatch.objects.get(key=match_key)
             except PlayerMatch.DoesNotExist:
+                print("player match does not exist")
                 skipped += 1
                 continue
 
             if match.odds_raw is not None:
+                print("match odds is none")
                 skipped += 1
                 continue
 

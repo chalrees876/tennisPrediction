@@ -69,8 +69,8 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Syncing matches between {date_start} and {date_stop}…")
 
-        created, updated = sync_matches_for_players(date_start, date_stop, maxranking=maxranking, minranking=minranking)
-        self.stdout.write(f"Matches: {created} created, {updated} updated")
+        #created, updated = sync_matches_for_players(date_start, date_stop, maxranking=maxranking, minranking=minranking)
+        #self.stdout.write(f"Matches: {created} created, {updated} updated")
 
         # ---- Sync odds for tournaments ----
         self.stdout.write("Syncing odds…")
