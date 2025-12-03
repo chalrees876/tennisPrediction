@@ -1,8 +1,10 @@
 # tennis/management/commands/sync_tennis_data.py
+import datetime
 
 from django.core.management import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
+from datetime import datetime
 
 from tennis.services.api_sync import sync_matches_for_players
 from tennis.services.odds import sync_odds_for_single_tournament
@@ -20,6 +22,17 @@ class Command(BaseCommand):
             type=int,
             default=30,
             help="How many past/future days of matches to sync.",
+        )
+
+        parser.add_argument(
+            "--date-start",
+            default="1999-01-01",
+            help="Start date for fixtures in YYYY-MM-DD",
+        )
+        parser.add_argument(
+            "--date-stop",
+            default=(datetime.today() + timedelta(days=90)).strftime("%Y-%m-%d"),
+            help="End date for fixtures in YYYY-MM-DD",
         )
         parser.add_argument(
             "--rankings",
@@ -46,14 +59,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **opt):
-        days = opt["days"]
+        date_start = opt["date_start"]
+        date_stop = opt["date_stop"]
         maxranking = opt["maxranking"]
         minranking = opt["minranking"]
 
         today = timezone.localdate()
-
-        date_start = (today - timedelta(days=days)).strftime("%Y-%m-%d")
-        date_stop = (today + timedelta(days=days)).strftime("%Y-%m-%d")
 
 
         # ---- Optional: Update player details ----
@@ -69,8 +80,8 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Syncing matches between {date_start} and {date_stop}…")
 
-        #created, updated = sync_matches_for_players(date_start, date_stop, maxranking=maxranking, minranking=minranking)
-        #self.stdout.write(f"Matches: {created} created, {updated} updated")
+        created, updated = sync_matches_for_players(date_start, date_stop, maxranking=maxranking, minranking=minranking)
+        self.stdout.write(f"Matches: {created} created, {updated} updated")
 
         # ---- Sync odds for tournaments ----
         self.stdout.write("Syncing odds…")
