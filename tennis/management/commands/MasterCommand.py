@@ -11,7 +11,6 @@ class Command(BaseCommand):
             "PlayerMatchData",
             "UpcomingMatchData",
             "TrainModel",
-            "CalculateOdds"
             ]
         start_time = datetime.datetime.now()
         for command in commands:

@@ -214,3 +214,124 @@ class MachineLearningModels:
             'lr_prob': float(lr_prob),
             'rf_prob': float(rf_prob),
         }
+        
+    def generate_all_predictions(self, bundle=None, model_path='tennis_model.joblib', 
+                                  queryset=None, verbose=True):
+        """
+        Generate predictions for all MatchFeatures and save to database.
+        
+        Args:
+            bundle: Pre-loaded model bundle (optional)
+            model_path: Path to model file if bundle not provided
+            queryset: Optional queryset to filter which matches to predict
+            verbose: Print progress updates
+        
+        Returns:
+            dict with success/error counts
+        """
+        # Load model if not provided
+        if bundle is None:
+            try:
+                bundle = self.load_model(model_path)
+                if verbose:
+                    print(f"Model loaded from {model_path}")
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Model file not found at {model_path}. Run training first.")
+
+        # Get queryset
+        if queryset is None:
+            queryset = MatchFeatures.objects.select_related('match').all()
+        
+        total = queryset.count()
+        if verbose:
+            print(f"Generating predictions for {total} matches...")
+
+        success_count = 0
+        error_count = 0
+
+        for i, mf in enumerate(queryset.iterator()):
+            try:
+                # Build feature vector
+                X = np.zeros((1, len(self.FEATURE_FIELDS)), dtype=np.float32)
+                for j, field in enumerate(self.FEATURE_FIELDS):
+                    val = getattr(mf, field, None)
+                    X[0, j] = float(val) if val is not None else 0.0
+
+                # Get predictions
+                lr_prob = bundle['log_reg'].predict_proba(X)[0, 1]
+                rf_prob = bundle['rf'].predict_proba(X)[0, 1]
+                
+                # Ensemble
+                w = bundle['ens_w']
+                ens_prob = w * lr_prob + (1 - w) * rf_prob
+
+                # Save prediction
+                mf.player_win_prob = float(ens_prob)
+                mf.save(update_fields=['player_win_prob'])
+                
+                success_count += 1
+
+                if verbose and (i + 1) % 500 == 0:
+                    print(f"Processed {i + 1}/{total}...")
+
+            except Exception as e:
+                if verbose:
+                    print(f"Error on MatchFeatures {mf.id}: {e}")
+                error_count += 1
+
+        if verbose:
+            print(f"\nDone: {success_count} predictions generated, {error_count} errors")
+
+        return {
+            'success': success_count,
+            'errors': error_count,
+            'total': total
+        }
+
+    def generate_predictions_for_upcoming(self, bundle=None, model_path='tennis_model.joblib', 
+                                           verbose=True):
+        """
+        Generate predictions only for upcoming (not completed) matches.
+        
+        Args:
+            bundle: Pre-loaded model bundle (optional)
+            model_path: Path to model file if bundle not provided
+            verbose: Print progress updates
+        
+        Returns:
+            dict with success/error counts
+        """
+        queryset = MatchFeatures.objects.filter(
+            match__completed=False
+        ).select_related('match')
+        
+        return self.generate_all_predictions(
+            bundle=bundle,
+            model_path=model_path,
+            queryset=queryset,
+            verbose=verbose
+        )
+
+    def generate_predictions_missing(self, bundle=None, model_path='tennis_model.joblib',
+                                      verbose=True):
+        """
+        Generate predictions only for matches missing player_win_prob.
+        
+        Args:
+            bundle: Pre-loaded model bundle (optional)
+            model_path: Path to model file if bundle not provided
+            verbose: Print progress updates
+        
+        Returns:
+            dict with success/error counts
+        """
+        queryset = MatchFeatures.objects.filter(
+            player_win_prob__isnull=True
+        ).select_related('match')
+        
+        return self.generate_all_predictions(
+            bundle=bundle,
+            model_path=model_path,
+            queryset=queryset,
+            verbose=verbose
+        )

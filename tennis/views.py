@@ -10,6 +10,11 @@ from tennis.models import (
     PlayerMatchReturnStats, MatchFeatures
 )
 
+def format_moneyline(ml: int) -> str:
+    if ml > 0:
+        return f"+{ml}"
+    return str(ml)
+
 
 def prob_to_american(p: float, round_to: int = 1) -> int:
     """Convert a fair (no-vig) win probability p to American moneyline."""
@@ -106,14 +111,17 @@ def completed_matches(request):
         p1_pct = round(ens_prob * 100, 1)
         p2_pct = round((1 - ens_prob) * 100, 1)
 
+        ens_ml_p1 = prob_to_american(ens_prob)
+        ens_ml_p2 = prob_to_american(1 - ens_prob)
+        
         matches.append({
             "match": match,
             "winner": winner,
             "ens_prob": ens_prob,
             "p1_pct": p1_pct,
             "p2_pct": p2_pct,
-            "ens_ml_p1": prob_to_american(ens_prob),
-            "ens_ml_p2": prob_to_american(1 - ens_prob),
+            "ens_ml_p1": format_moneyline(ens_ml_p1),
+            "ens_ml_p2": format_moneyline(ens_ml_p2),
         })
 
     # AJAX response
@@ -176,14 +184,17 @@ def upcoming_matches(request):
 
         p1_pct = round(ens_prob * 100, 1)
         p2_pct = round((1 - ens_prob) * 100, 1)
+        
+        ens_prob_p1 = prob_to_american(ens_prob)
+        ens_prob_p2 = prob_to_american(1 - ens_prob)
 
         matches.append({
             "match": match,
             "ens_prob": ens_prob,
             "p1_pct": p1_pct,
             "p2_pct": p2_pct,
-            "ens_ml_p1": prob_to_american(ens_prob),
-            "ens_ml_p2": prob_to_american(1 - ens_prob),
+            "ens_ml_p1": format_moneyline(ens_prob_p1),
+            "ens_ml_p2": format_moneyline(ens_prob_p2),
         })
 
     # AJAX response
