@@ -17,7 +17,6 @@ class TennisDataCollector:
     def collect_training_data(self):
         training_data = []
         qs = (PlayerMatch.objects
-              .filter(date__range=[self.start_date, self.end_date])
               .select_related('player','opponent')
               .order_by('date'))
 

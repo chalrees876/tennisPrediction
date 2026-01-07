@@ -13,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--rebuild',
             type=bool,
-            default=False,
+            default=True,
             help='Rebuild training data before training model',
         )
         parser.add_argument(
