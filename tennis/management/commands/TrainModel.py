@@ -7,12 +7,17 @@ from tennis.ml.TennisDataCollector import TennisDataCollector
 
 
 class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--rebuild',
+            type=bool,
+            default=False,
+            help='Rebuild training data before training model',
+        )
     def handle(self, *args, **options):
         start_time = datetime.datetime.now()
-        fe = TennisDataCollector(start_date="2018-01-01", end_date=datetime.date.today())
-        match_features = fe.collect_training_data()
-        df = pd.read_csv('tennis/data/training_data.csv')
-        learn = MachineLearningModels(df).log_reg_train()
+        TennisDataCollector(start_date="2018-01-01", end_date=datetime.date.today(), rebuild = options['rebuild']).collect_training_data()
+        learn = MachineLearningModels().log_reg_train()
         joblib.dump(learn, 'tennis/models/machine_learning.pkl')
         end_time = datetime.datetime.now()
         print('Time taken:', end_time - start_time)

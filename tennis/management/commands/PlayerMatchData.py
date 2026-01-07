@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from pprint import pprint
+import time
 
 from django.core.management import BaseCommand
 from django.db import transaction
@@ -21,7 +22,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--min-rank", type=int, default=1)
-        parser.add_argument("--max-rank", type=int, default=500)
+        parser.add_argument("--max-rank", type=int, default=2000)
 
     def handle(self, *args, **options):
 
@@ -35,12 +36,13 @@ class Command(BaseCommand):
         player_count = 0
         for player in players:
             try:
+                time.sleep(5)
                 self.stdout.write(f"Importing recent matches for {player.name}")
                 self.stdout.write(f"Ranking: {player.ranking}")
                 results = self.get_results(player)
                 for row in results:
                     if row['Score'] == 'Live Scores' or not row['Score'].strip():
-                        row['Completed'] = False
+                        row['Completed'] = None # set completed to none as we need to check for that through the tournament tab
                         row['Won'] = None
                     else:
                         row['Completed'] = True
@@ -207,7 +209,40 @@ class Command(BaseCommand):
                 return []
 
         return self._with_page(url, parse_return_page)
-
+    
+    def get_tournament_urls(self):
+        url = "https://www.tennisabstract.com/cgi-bin/leaders.cgi"
+        
+        def parse_tournaments_page(page):
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_selector("#navbar", timeout=10000)
+                
+                # Hover to reveal dropdown
+                page.hover("button.dropbtn:has-text('Tournaments')")
+                page.wait_for_selector(".dropdown-content a", state="visible", timeout=5000)
+                
+                # Get all tournament links from the Tournaments dropdown
+                dropdown = page.query_selector("button.dropbtn:has-text('Tournaments') + .dropdown-content")
+                links = dropdown.query_selector_all("a")
+                
+                tournament_urls = []
+                for link in links:
+                    if name.startswith("WTA"):
+                        continue  # Skip WTA tournaments
+                    href = link.get_attribute("href")
+                    name = link.inner_text().strip()
+                    if href:
+                        tournament_urls.append({"name": name, "url": href})
+                        
+                return tournament_urls
+            
+            except Exception as e:
+                print(f"Error getting tournament URLs: {e}")
+                return []
+        
+        return self._with_page(url, parse_tournaments_page)
+    
     def _with_page(self, url, fn):
         """Helper function to manage Playwright browser context"""
         with sync_playwright() as pw:

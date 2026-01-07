@@ -110,13 +110,13 @@ class Tournament(models.Model):
         return f"{self.name}"
 
 class PlayerMatch(models.Model):
-    date = models.DateField(null=False)
+    date = models.DateField(null=True)
     player = ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player", null=False)
     tournament = ForeignKey(Tournament, on_delete=models.CASCADE)
     surface = models.CharField(max_length=20, default="Not Specified")
     round = models.CharField(max_length=50, null=False, blank=False)
-    rank = models.IntegerField()
-    opponent_rank = models.IntegerField()
+    rank = models.IntegerField(null=True)
+    opponent_rank = models.IntegerField(null=True)
     opponent = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_opponent", null=False)
     score = models.CharField(max_length=50)
     won = models.BooleanField(default=None, null=True)
@@ -185,6 +185,58 @@ class PlayerPointByPointStats(models.Model):
     ad_s_w_pctg = models.FloatField()
     deuce_r_w_pctg = models.FloatField()
     ad_r_w_pctg = models.FloatField()
+    
+class PlayerMatchOdds(models.Model):
+    match = models.ForeignKey(PlayerMatch, on_delete=models.CASCADE)
+    log_reg_prob = models.FloatField(null=True)
+    log_reg_amer = models.IntegerField(null=True)
+    log_reg_dec = models.FloatField(null=True)
+    rf_prob = models.FloatField(null=True)
+    rf_amer = models.IntegerField(null=True)
+    rf_dec = models.FloatField(null=True)
+    ens_prob = models.FloatField(null=True)
+    ens_amer = models.IntegerField(null=True)
+    ens_dec = models.FloatField(null=True)
+    
+class MatchFeatures(models.Model):
+    
+    match = models.OneToOneField(PlayerMatch, on_delete=models.CASCADE, related_name="training_data")
+    
+    # Target
+    player_won = models.BooleanField(null=True)
+    
+    # H2H features
+    h2h_win_ratio_diff = models.FloatField(default=0.0)
+    h2h_recent_momentum = models.FloatField(default=0.0)
+    
+    # Form & performance diffs
+    recent_form_diff = models.FloatField(default=0.0)
+    win_rate_diff = models.FloatField(default=0.0)
+    serve_rating_diff = models.FloatField(default=0.0)
+    bp_conv_pctg_diff = models.FloatField(default=0.0)
+    dom_ratio_diff = models.FloatField(default=0.0)
+    
+    # Fatigue & volume
+    fatigue_diff = models.FloatField(default=0.0)
+    match_volume_14d_diff = models.FloatField(default=0.0)
+    
+    # Surface-specific (nullable since not all matches have surface data)
+    win_rate_hard_diff = models.FloatField(null=True, blank=True)
+    win_rate_clay_diff = models.FloatField(null=True, blank=True)
+    win_rate_grass_diff = models.FloatField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    player_win_prob = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Match Training Data"
+        verbose_name_plural = "Match Training Data"
+
+    def __str__(self):
+        return f"Match Features for {self.match}"
 
 """class MatchForm(forms.Form):
     player = forms.ModelChoiceField(

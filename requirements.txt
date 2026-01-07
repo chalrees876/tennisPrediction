@@ -1,16 +1,17 @@
-  GNU nano 7.2                                                  requirements.txt                                                           
+                                        
 python-dotenv
 joblib
 selenium
 Django
-pandas>=2.0
+pandas
 numpy
-scikit-learn>=1.3
-matplotlib>=3.7
-seaborn>=0.12
-natsort>=8.4
+scikit-learn
+matplotlib
+seaborn
+natsort
 psycopg
-boto3>=1.28
+boto3
+playwright
 
 
 

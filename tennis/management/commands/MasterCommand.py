@@ -9,8 +9,9 @@ class Command(BaseCommand):
             "EloImport",
             "PlayerStats",
             "PlayerMatchData",
+            "UpcomingMatchData",
             "TrainModel",
-            "UpcomingMatches"
+            "CalculateOdds"
             ]
         start_time = datetime.datetime.now()
         for command in commands:

@@ -8,28 +8,77 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import roc_auc_score, brier_score_loss
 from sklearn.inspection import permutation_importance
 import joblib
+from tennis.models import MatchFeatures
 
 
 class MachineLearningModels:
-    def __init__(self, training_df: pd.DataFrame):
-        self.training_df = training_df
+    
+    FEATURE_FIELDS = [
+        'h2h_win_ratio_diff',
+        'h2h_recent_momentum',
+        'recent_form_diff',
+        'win_rate_diff',
+        'serve_rating_diff',
+        'bp_conv_pctg_diff',
+        'dom_ratio_diff',
+        'fatigue_diff',
+        'match_volume_14d_diff',
+        'win_rate_hard_diff',
+        'win_rate_clay_diff',
+        'win_rate_grass_diff',
+    ]
 
-    def _time_split(self, X, y, frac=0.8):
-        """Temporal split to avoid lookahead bias"""
-        n = len(X)
-        cut = int(n * frac)
-        return (X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:])
+    def __init__(self, queryset=None):
+        """
+        Initialize with optional queryset filter.
+        If None, uses all MatchTrainingData with valid targets.
+        """
+        if queryset is None:
+            self.queryset = MatchFeatures.objects.filter(
+                player_won__isnull=False
+            ).select_related('match').order_by('match__date')
+        else:
+            self.queryset = queryset.order_by('match__date')
+
+    def _load_data(self):
+        """Load features and target from Django models into numpy arrays."""
+        data = list(self.queryset.values(
+            'match__date',
+            'match_id',
+            'player_won',
+            *self.FEATURE_FIELDS
+        ))
+        
+        if not data:
+            raise ValueError("No training data found")
+        
+        n = len(data)
+        n_features = len(self.FEATURE_FIELDS)
+        
+        X = np.zeros((n, n_features), dtype=np.float32)
+        y = np.zeros(n, dtype=np.int32)
+        
+        for i, row in enumerate(data):
+            y[i] = int(row['player_won'])
+            for j, field in enumerate(self.FEATURE_FIELDS):
+                val = row[field]
+                X[i, j] = float(val) if val is not None else 0.0
+        
+        return X, y
 
     def log_reg_train(self):
         print("-------------------------------\n Logistic Regression (Temporal Validation) --------------------")
 
-        # 1) Sort by time and build X/y
-        df = self.training_df.sort_values('date').reset_index(drop=True)
-        y = df['target'].astype(int)
-        X = df.drop(columns=['target', 'match_id', 'date', 'player_id', 'opponent_id'], errors='ignore').fillna(0)
+        # 1) Load data from Django models (already sorted by date in queryset)
+        X, y = self._load_data()
+        print(f"Loaded {len(y)} training samples with {len(self.FEATURE_FIELDS)} features")
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
+        # 2) Temporal train/test split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.20, random_state=42, shuffle=False  # No shuffle for temporal split
+        )
 
+        # 3) Train Logistic Regression
         model = LogisticRegression(
             random_state=42,
             max_iter=10000,
@@ -78,19 +127,15 @@ class MachineLearningModels:
         coefficients = model.coef_[0]
         odds_ratios = np.exp(coefficients)
 
-        feature_importance = pd.DataFrame({
-            'Feature': X.columns,
-            'Coefficient': coefficients,
-            'Odds Ratio': odds_ratios
-        }).sort_values(by='Coefficient', ascending=False)
-
         print("\nFeature Importance (Coefficient and Odds Ratio):")
-        print(feature_importance.head(10))  # Show top 10 only
+        for i, field in enumerate(self.FEATURE_FIELDS):
+            print(f"  {field}: coef={coefficients[i]:.4f}, odds_ratio={odds_ratios[i]:.4f}")
 
         # 9) Permutation importance (on a subset for speed)
-        if len(X_test) > 1000:  # Use subset if test set is large
-            X_test_sample = X_test.sample(n=1000, random_state=42)
-            y_test_sample = y_test.loc[X_test_sample.index]
+        if len(X_test) > 1000:
+            indices = np.random.RandomState(42).choice(len(X_test), 1000, replace=False)
+            X_test_sample = X_test[indices]
+            y_test_sample = y_test[indices]
         else:
             X_test_sample = X_test
             y_test_sample = y_test
@@ -100,14 +145,10 @@ class MachineLearningModels:
             n_repeats=10, random_state=42, n_jobs=-1
         )
 
-        perm_importance_df = pd.DataFrame({
-            'Feature': X.columns,
-            'Importance Mean': perm_importance.importances_mean,
-            'Importance Std': perm_importance.importances_std
-        }).sort_values(by='Importance Mean', ascending=False)
-
         print("\nTop 10 Permutation Importance:")
-        print(perm_importance_df.head(10))
+        importance_order = np.argsort(perm_importance.importances_mean)[::-1]
+        for idx in importance_order[:10]:
+            print(f"  {self.FEATURE_FIELDS[idx]}: {perm_importance.importances_mean[idx]:.4f} +/- {perm_importance.importances_std[idx]:.4f}")
 
         # 10) Print results
         print(f"\nLogistic Regression AUC: {lr_auc:.4f}")
@@ -115,18 +156,61 @@ class MachineLearningModels:
         print(f"Ensemble AUC (w={best_w:.2f}): {best_auc:.4f}")
         print(f"Logistic Regression Test Accuracy: {model.score(X_test, y_test):.4f}")
 
-        # 11) Return bundle in the expected format for your inference code
+        # 11) Return bundle for inference
         bundle = {
-            'log_reg': calibrated_model,  # Calibrated logistic regression
-            'rf': rf_model,  # Random forest model
-            'ens_w': best_w,  # Optimal ensemble weight
-            'features': X.columns.tolist(),  # Feature names for alignment
+            'log_reg': calibrated_model,
+            'rf': rf_model,
+            'ens_w': best_w,
+            'features': self.FEATURE_FIELDS,
             'meta': {
                 'lr_auc': float(lr_auc),
                 'rf_auc': float(rf_auc),
                 'ens_auc': float(best_auc),
-                'feature_count': len(X.columns)
+                'feature_count': len(self.FEATURE_FIELDS),
+                'training_samples': len(y),
             }
         }
 
         return bundle
+    
+    def save_model(self, bundle, path='tennis_model.joblib'):
+        """Save trained model bundle to disk."""
+        joblib.dump(bundle, path)
+        print(f"Model saved to {path}")
+
+    @staticmethod
+    def load_model(path='tennis_model.joblib'):
+        """Load trained model bundle from disk."""
+        return joblib.load(path)
+
+    def predict_match(self, bundle, match_training_data):
+        """
+        Predict outcome for a single match using the trained ensemble.
+        
+        Args:
+            bundle: Trained model bundle from log_reg_train()
+            match_training_data: MatchTrainingData instance
+        
+        Returns:
+            dict with prediction probabilities
+        """
+        # Build feature vector
+        X = np.zeros((1, len(self.FEATURE_FIELDS)), dtype=np.float32)
+        for j, field in enumerate(self.FEATURE_FIELDS):
+            val = getattr(match_training_data, field, None)
+            X[0, j] = float(val) if val is not None else 0.0
+
+        # Get predictions from both models
+        lr_prob = bundle['log_reg'].predict_proba(X)[0, 1]
+        rf_prob = bundle['rf'].predict_proba(X)[0, 1]
+        
+        # Ensemble prediction
+        w = bundle['ens_w']
+        ens_prob = w * lr_prob + (1 - w) * rf_prob
+
+        return {
+            'player_win_prob': float(ens_prob),
+            'opponent_win_prob': float(1 - ens_prob),
+            'lr_prob': float(lr_prob),
+            'rf_prob': float(rf_prob),
+        }
