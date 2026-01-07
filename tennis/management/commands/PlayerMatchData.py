@@ -30,7 +30,7 @@ class Command(BaseCommand):
         max_rank = options["max_rank"]
 
         try:
-            players = Player.objects.filter(ranking__lte=max_rank, ranking__gt=min_rank)
+            players = Player.objects.filter(ranking__lte=max_rank, ranking__gte=min_rank)
         except Player.DoesNotExist:
             self.stdout.write("Player not found")
         player_count = 0
@@ -42,10 +42,8 @@ class Command(BaseCommand):
                 results = self.get_results(player)
                 for row in results:
                     if row['Score'] == 'Live Scores' or not row['Score'].strip():
-                        row['Completed'] = None # set completed to none as we need to check for that through the tournament tab
                         row['Won'] = None
-                    else:
-                        row['Completed'] = True
+                    row['Completed'] = True
                     with transaction.atomic():
                         try:
                             tournament, tournament_created = Tournament.objects.get_or_create(name=row['Tournament'], year=row['Date'][-4:])

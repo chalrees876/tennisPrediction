@@ -8,7 +8,8 @@ from django.db import transaction
 from django.db.models import Q
 from playwright.sync_api import sync_playwright
 
-from tennis.models import Player, PlayerMatch, Tournament
+from tennis.ml.feature_engineering import TennisFeatureEngineer
+from tennis.models import MatchFeatures, Player, PlayerMatch, Tournament
 
 
 class Command(BaseCommand):
@@ -24,67 +25,88 @@ class Command(BaseCommand):
             upcoming_matches = self.parse_tournament(url)
             
             for match in upcoming_matches:
-                try:
-                    player_obj1 = Player.objects.filter(name__iexact=match['player1']).first()
-                    player_obj2 = Player.objects.filter(name__iexact=match['player2']).first()
-                except Player.DoesNotExist:
+                player_obj1 = Player.objects.filter(name__iexact=match['player1']).first()
+                player_obj2 = Player.objects.filter(name__iexact=match['player2']).first()
+                
+                if not player_obj1 or not player_obj2:
                     self.stdout.write(
                         self.style.ERROR(f"Player not found: {match['player1']} or {match['player2']}")
                     )
                     continue
                 
-                tournament_obj, created = Tournament.objects.get_or_create(name=name, year=datetime.now().year)
+                tournament_obj, created = Tournament.objects.get_or_create(
+                    name=name, 
+                    year=datetime.now().year
+                )
                 
                 try:
-                    pm_obj1, created1 = PlayerMatch.objects.update_or_create(
+                    # Try to find existing match (any date)
+                    existing_match1 = PlayerMatch.objects.filter(
                         player=player_obj1,
                         opponent=player_obj2,
                         round=match['round'],
                         tournament=tournament_obj,
-                        date=None,
-                        defaults={
-                            'completed': False,
-                            'surface': "Not Specified",
-                            'rank': player_obj1.ranking if player_obj1 else None,
-                            'opponent_rank': player_obj2.ranking if player_obj2 else None,
-                            'score': "N/A",
-                            'won': None
-                        }
-                    )
-                    if created1:
-                        self.stdout.write(
-                            self.style.SUCCESS(f"created match for {pm_obj1.player.name} vs {pm_obj1.opponent.name}")
-                        )
+                        completed=False
+                    ).first()
+                    
+                    if existing_match1:
+                        self.make_match_features(existing_match1)
                     else:
-                        self.stdout.write(
-                            self.style.WARNING(f"match already exists for {pm_obj1.player.name} vs {pm_obj1.opponent.name}")
+                        # Create new
+                        pm_obj1 = PlayerMatch.objects.create(
+                            player=player_obj1,
+                            opponent=player_obj2,
+                            round=match['round'],
+                            tournament=tournament_obj,
+                            date=None,
+                            completed=False,
+                            surface="Not Specified",
+                            rank=player_obj1.ranking,
+                            opponent_rank=player_obj2.ranking,
+                            score="N/A",
+                            won=None
                         )
-                    pm_obj2, created2 = PlayerMatch.objects.update_or_create(
+                        self.stdout.write(
+                            self.style.SUCCESS(f"Created match: {player_obj1.name} vs {player_obj2.name}")
+                        )
+                        self.make_match_features(pm_obj1)
+
+                    # Same for reverse match
+                    existing_match2 = PlayerMatch.objects.filter(
                         player=player_obj2,
                         opponent=player_obj1,
                         round=match['round'],
                         tournament=tournament_obj,
-                        date=None,
-                        defaults={
-                            'completed': False,
-                            'surface': "Not Specified",
-                            'rank': player_obj2.ranking if player_obj2 else None,
-                            'opponent_rank': player_obj1.ranking if player_obj1 else None,
-                            'score': "N/A",
-                            'won': None
-                        }
-                    )
-                    if created2:
+                        completed=False
+                    ).first()
+                    
+                    if existing_match2:
                         self.stdout.write(
-                            self.style.SUCCESS(f"created match for {pm_obj2.player.name} vs {pm_obj2.opponent.name}")
+                            self.style.WARNING(f"Match already exists: {player_obj2.name} vs {player_obj1.name}")
                         )
+                        self.make_match_features(existing_match2)
                     else:
-                        self.stdout.write(
-                            self.style.WARNING(f"match already exists for {pm_obj2.player.name} vs {pm_obj2.opponent.name}")
+                        pm_obj2 = PlayerMatch.objects.create(
+                            player=player_obj2,
+                            opponent=player_obj1,
+                            round=match['round'],
+                            tournament=tournament_obj,
+                            date=None,
+                            completed=False,
+                            surface="Not Specified",
+                            rank=player_obj2.ranking,
+                            opponent_rank=player_obj1.ranking,
+                            score="N/A",
+                            won=None
                         )
+                        self.stdout.write(
+                            self.style.SUCCESS(f"Created match: {player_obj2.name} vs {player_obj1.name}")
+                        )
+                        self.make_match_features(pm_obj2)
+                        
                 except Exception as e:
                     self.stdout.write(
-                        self.style.ERROR(f"Error creating match for {match['player1']} vs {match['player2']}: {e}")
+                        self.style.ERROR(f"Error creating match: {match['player1']} vs {match['player2']}: {e}")
                     )
                     continue
                     
@@ -208,6 +230,22 @@ class Command(BaseCommand):
                     browser.close()
                 except Exception:
                     pass
+                
+    def make_match_features(self, match):
+        if not MatchFeatures.objects.filter(match=match).exists():
+            self.stdout.write(
+                self.style.WARNING(f"match features don't exist for match {match.id}, creating...")
+            )
+            fe = TennisFeatureEngineer().create_match_features(match)
+            if not fe:
+                self.stdout.write(
+                    self.style.ERROR(f"Could not create features for match {match.id}")
+                )
+            else:
+                self.stdout.write(
+                    self.style.SUCCESS(f"Created features for match {match.id}")
+                )
+            return fe
 
     @staticmethod
     def pctg_to_dec(pctg):

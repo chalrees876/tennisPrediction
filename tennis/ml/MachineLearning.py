@@ -35,7 +35,7 @@ class MachineLearningModels:
         """
         if queryset is None:
             self.queryset = MatchFeatures.objects.filter(
-                player_won__isnull=False
+                match__won__isnull=False
             ).select_related('match').order_by('match__date')
         else:
             self.queryset = queryset.order_by('match__date')

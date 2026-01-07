@@ -17,7 +17,7 @@ class TennisDataCollector:
     def collect_training_data(self):
         training_data = []
         qs = (PlayerMatch.objects
-              .filter(date__range=[self.start_date, self.end_date], completed=True)
+              .filter(date__range=[self.start_date, self.end_date])
               .select_related('player','opponent')
               .order_by('date'))
 
@@ -28,16 +28,16 @@ class TennisDataCollector:
         for i, match in enumerate(matches):
             if (i + 1) % 500 == 0:
                     print(f"Processed {i + 1}/{total} matches...")
-            if MatchFeatures.objects.filter(match=match).exists() & self.rebuild == False:
+            if MatchFeatures.objects.filter(match=match).exists() and not self.rebuild:
                 continue
             try:
                 feats = self.feature_engineer.create_match_features(match, include_adjusted=False)
                 if not feats:  # skipped due to sparse history, errors, etc.
                     continue
                 if match.won is None:
-                    continue
-
-                feats['target'] = 1 if match.won else 0
+                    feats['target'] = None
+                else:
+                    feats['target'] = 1 if match.won else 0
                 feats['match_id'] = match.id
                 feats['date'] = match.date
                 feats['player_id'] = match.player.id  # stable id

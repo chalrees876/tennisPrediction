@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from datetime import timedelta
+import datetime
 from django.db.models import Avg, Q, Max
 from typing import Dict, Tuple, Optional, List
 
@@ -37,6 +38,8 @@ class TennisFeatureEngineer:
         try:
             p1, p2 = match.player, match.opponent
             match_date = match.date
+            if match_date is None:
+                match_date = datetime.date.today()
             exclude_id = match.id
 
             # per-player feature dicts

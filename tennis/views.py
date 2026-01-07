@@ -2,7 +2,7 @@ import joblib
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.db.models import Q
+from django.db.models import Q, F
 
 from tennis.ml.MachineLearning import MachineLearningModels
 from tennis.models import (
@@ -73,7 +73,7 @@ def completed_matches(request):
     ).select_related(
         'match', 'match__player', 'match__opponent', 'match__tournament'
     ).order_by('-match__date')
-
+    
     # Handle sorting
     sort_field = request.GET.get("filter", "date")
     if sort_field == "date":
@@ -159,10 +159,14 @@ def completed_matches(request):
 def upcoming_matches(request):
     # Get upcoming (not completed) matches with training data
     matches_qs = MatchFeatures.objects.filter(
-        match__completed=False
+        match__completed=False,
+        match__player_id__lt=F('match__opponent_id')  # Consistent deduplication
     ).select_related(
         'match', 'match__player', 'match__opponent', 'match__tournament'
-    ).order_by('match__date')
+    ).order_by('match__player__ranking', 'match__date')
+
+    print(f"DEBUG: Found {matches_qs.count()} matches")
+
 
     # Pagination
     page = request.GET.get('page', 1)
