@@ -5,8 +5,12 @@ from django.db import transaction
 import math
 
 from selenium import webdriver
+from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 from tennis.models import Player, PlayerElo
 
 class Command(BaseCommand):
@@ -84,38 +88,103 @@ class Command(BaseCommand):
             self.stdout.write(f"Summary\n{success_count} successes\n{error_count} errors")
 
     def get_men_elo_data(self):
-        # Set up Chrome options
+        """
+        Scrape the ATP Elo ratings table from tennisabstract using a single,
+        short-lived headless Chrome session.
+
+        Returns: list[dict] like:
+            [
+              {"Player": "Novak Djokovic", "Elo": "2200", ...},
+              ...
+            ]
+        """
+
+        url = "https://tennisabstract.com/reports/atp_elo_ratings.html"
+
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-images")  # Block images for faster loading
+        chrome_options.add_argument("--window-size=1280,720")
+        # Keep images off to save bandwidth and CPU
         chrome_options.add_experimental_option("prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Disable images
+            "profile.managed_default_content_settings.images": 2,
         })
+        # Friendly, explicit bot UA
+        chrome_options.add_argument(
+            "user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)"
+        )
 
-        # Initialize driver
-        driver = webdriver.Chrome(options=chrome_options)
+        try:
+            driver = webdriver.Chrome(options=chrome_options)
+        except WebDriverException as e:
+            self.stderr.write(f"[EloImport] Failed to start Chrome: {e}")
+            return []
 
-        driver.get("https://tennisabstract.com/reports/atp_elo_ratings.html")
+        try:
+            self.stdout.write(f"[EloImport] Loading {url}")
+            driver.set_page_load_timeout(60)
 
-        ranking_element = driver.find_element(By.ID, "reportable")
+            try:
+                driver.get(url)
+            except WebDriverException as e:
+                # If Cloudflare / network spikes, bail gracefully
+                self.stderr.write(f"[EloImport] Error during driver.get(): {e}")
+                return []
 
-        header_data = ranking_element.find_elements(By.TAG_NAME, "th")
-        headers = []
-        for i, header in enumerate(header_data):
-            if not header.text.isspace():
-                headers.append(header.text)
+            # Wait for Cloudflare to finish and the real table to appear.
+            # Strategy:
+            #  - If title stays "Just a moment..." we are still on challenge page.
+            #  - We wait up to 45s for #reportable to exist in DOM.
+            wait = WebDriverWait(driver, 45)
 
-        rows = ranking_element.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
-        total_data = []
-        for row in rows:
-            cell_data = row.find_elements(By.TAG_NAME, "td")
-            cells = [cell.text for cell in cell_data if cell.text.strip()]
-            row_dict = dict(zip(headers, cells))
-            total_data.append(row_dict)
-        pprint(total_data)
-        driver.close()
-        return total_data
+            # Optional: log the first title to see if we hit challenge
+            self.stdout.write(f"[EloImport] Initial title: {driver.title!r}")
+
+            try:
+                ranking_element = wait.until(
+                    EC.presence_of_element_located((By.ID, "reportable"))
+                )
+            except TimeoutException:
+                self.stderr.write(
+                    "[EloImport] Timed out waiting for #reportable; likely still on Cloudflare challenge or layout changed."
+                )
+                # Log a small snippet so you can see what page you got
+                snippet = driver.page_source[:800].replace("\n", " ")
+                self.stderr.write(f"[EloImport] Page snippet: {snippet}")
+                return []
+
+            # At this point we should be on the real Elo table page
+            self.stdout.write("[EloImport] Found #reportable table, parsing...")
+
+            # Headers
+            header_data = ranking_element.find_elements(By.TAG_NAME, "th")
+            headers = [h.text.strip() for h in header_data if h.text.strip()]
+
+            # Rows
+            body = ranking_element.find_element(By.TAG_NAME, "tbody")
+            rows = body.find_elements(By.TAG_NAME, "tr")
+
+            total_data = []
+            for row in rows:
+                cell_data = row.find_elements(By.TAG_NAME, "td")
+                cells = [cell.text.strip() for cell in cell_data if cell.text.strip()]
+                if not cells:
+                    continue
+                row_dict = dict(zip(headers, cells))
+                total_data.append(row_dict)
+
+            self.stdout.write(f"[EloImport] Parsed {len(total_data)} Elo rows.")
+            return total_data
+
+        except WebDriverException as e:
+            self.stderr.write(f"[EloImport] WebDriverException while scraping: {e}")
+            return []
+        finally:
+            try:
+                driver.quit()
+            except Exception:
+                # If Chrome already died, ignore
+                pass

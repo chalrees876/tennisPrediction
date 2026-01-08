@@ -137,21 +137,13 @@
         <div class="moneyline-row">
           <div class="fw-medium">{{ m.match.player.name }}</div>
           <div class="fw-bold">
-            {% if m.ens_ml_p1|slice:":1" == "-" %}
-              {{ m.ens_ml_p1 }}
-            {% else %}
-              +{{ m.ens_ml_p1 }}
-            {% endif %}
+            {{ m.ens_ml_p1}}
           </div>
         </div>
         <div class="moneyline-row">
           <div class="fw-medium">{{ m.match.opponent.name }}</div>
           <div class="fw-bold">
-            {% if m.ens_ml_p2|slice:":1" == "-" %}
-              {{ m.ens_ml_p2 }}
-            {% else %}
-              +{{ m.ens_ml_p2 }}
-            {% endif %}
+            {{ m.ens_ml_p2}}
           </div>
         </div>
       </div>

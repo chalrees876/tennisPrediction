@@ -1,6 +1,6 @@
 from datetime import datetime
 from pprint import pprint
-
+import time
 from django.core.management import BaseCommand
 from django.db import transaction
 from selenium import webdriver
@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from tennis.management.commands.UpcomingMatches import pctg_to_dec
+from tennis.management.commands.CalculateOdds import pctg_to_dec
 from tennis.models import Player, PlayerMatch, Tournament, PlayerServeStats, PlayerReturnStats, PlayerBreakStats, \
     PlayerMoreStats
 
@@ -25,12 +25,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        dry_run = options['dry_run']
-
-        self.update_stats("Serve")
-        self.update_stats("Breaks")
-        self.update_stats("More")
-        self.update_stats("Return")
+       dry_run = options['dry_run']
+       
+       self.update_stats("Serve")
+       time.sleep(5)  # Wait between stat types
+       self.update_stats("Breaks")
+       time.sleep(5)
+       self.update_stats("More")
+       time.sleep(5)
+       self.update_stats("Return")
 
 
     def update_stats(self, type):
@@ -79,7 +82,6 @@ class Command(BaseCommand):
     def player_stats(self, stat_type):
         # Set up Chrome options
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Run in background
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -88,6 +90,8 @@ class Command(BaseCommand):
         chrome_options.add_experimental_option("prefs", {
             "profile.managed_default_content_settings.images": 2,  # Disable images
         })
+        chrome_options.add_argument("user-agent=TennisBetSmartBot/1.0 (+https://tennisbetsmart.com; contact: chris.mcke876@gmail.com)")
+
 
         # Initialize driver
         driver = webdriver.Chrome(options=chrome_options)
