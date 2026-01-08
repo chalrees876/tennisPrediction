@@ -10,10 +10,7 @@ from sklearn.inspection import permutation_importance
 import joblib
 from tennis.models import MatchFeatures
 
-
-class MachineLearningModels:
-    
-    FEATURE_FIELDS = [
+feature_fields = [
         'h2h_win_ratio_diff',
         'h2h_recent_momentum',
         'recent_form_diff',
@@ -28,6 +25,9 @@ class MachineLearningModels:
         'win_rate_grass_diff',
     ]
 
+
+class MachineLearningModels:
+    FEATURE_FIELDS = feature_fields
     def __init__(self, queryset=None):
         """
         Initialize with optional queryset filter.

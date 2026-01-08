@@ -167,38 +167,36 @@ class Command(BaseCommand):
                 player_links = [link for link in links if "&f=ACareerqq" not in (link.get_attribute("href") or "")]
 
                 inner_html = upcoming_span.inner_html()
+                matches = []
+                
+                # Parse each line with its round info
                 lines = inner_html.split("<br>")
                 for line in lines:
                     if not line.strip() or line.strip() == "&nbsp;":
                         continue
-                    # Extract round (text before first "<a")
-                    round_match = re.match(r'^([^<]+)<a', line)
-                    round_info = ""
-                    if round_match:
-                        # Clean up: "R2: (1)" -> "R2"
-                        round_text = round_match.group(1).strip()
-                        # Extract just the round part (e.g., "R2", "QF", "SF", "F")
-                        round_clean = re.match(r'^(R\d+|QF|SF|F|RR)', round_text)
-                        if round_clean:
-                            round_info = round_clean.group(1)
-                
-                matches = []
-                # Process in pairs
-                for i in range(0, len(player_links) - 1, 2):
-                    player1_name = player_links[i].inner_text().strip()
-                    player2_name = player_links[i + 1].inner_text().strip()
-                    matches.append({
-                        "player1": player1_name,
-                        "player2": player2_name,
-                        "round": round_info
-                    })
+                        
+                    # Extract round
+                    round_match = re.match(r'^(R\d+|QF|SF|F|RR)', line.strip())
+                    round_info = round_match.group(1) if round_match else ""
                     
+                    # Extract player links from this line
+                    player_pattern = r'<a[^>]*>([^<]+)</a>'
+                    players = [m for m in re.findall(player_pattern, line) 
+                            if "&f=ACareerqq" not in line]  # Simplified check
+                    
+                    if len(players) >= 2:
+                        matches.append({
+                            "player1": players[0].strip(),
+                            "player2": players[1].strip(),
+                            "round": round_info
+                        })
                 
                 return matches
+            
             except Exception as e:
                 print(f"Error getting upcoming matches: {e}")
                 return []
-    
+                
         return self._with_page(tournament_url, parse_upcoming_page)
     
     def _with_page(self, url, fn):

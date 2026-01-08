@@ -123,26 +123,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"Created odds for match {match}"))
                 else:
                     self.stdout.write(self.style.WARNING(f"Updated odds for match {match}"))
-                    
-                pmo_obj2, created = PlayerMatchOdds.objects.update_or_create(
-                    match=match,
-                    defaults={
-                        "log_reg_prob": 1 - p_lr,
-                        "log_reg_amer": lines["log_reg_ml_p2"],
-                        "log_reg_dec": lines["log_reg_dec_p2"],
-                        "rf_prob": 1 - p_rf,
-                        "rf_amer": lines["rf_ml_p2"],
-                        "rf_dec": lines["rf_dec_p2"],
-                        "ens_prob": 1 - p_ens,
-                        "ens_amer": lines["ens_ml_p2"],
-                        "ens_dec": lines["ens_dec_p2"],
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f"Created odds for match {match} (opponent)"))
-                else:
-                    self.stdout.write(self.style.WARNING(f"Updated odds for match {match} (opponent)"))
-                    
+
         except Exception as e:
             print(e)
         df = pd.DataFrame(match_odds_list)

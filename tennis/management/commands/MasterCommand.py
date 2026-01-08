@@ -11,17 +11,17 @@ class Command(BaseCommand):
             default=False
         )
         parser.add_argument(
-            'reload_predictions',
+            '--reload_predictions',
             type=bool,
             default=False
         )
         parser.add_argument(
-            'import_matches',
+            '--import_matches',
             type=bool,
             default=False
         )
         parser.add_argument(
-            'import_stats',
+            '--import_stats',
             type=bool,
             default=False
         )
@@ -47,6 +47,6 @@ class Command(BaseCommand):
                 call_command("EloImport")
                 call_command("PlayerStats")
             if options['reload_predictions']:
-                call_command("TrainModel", build_features=False, rebuild=False)
+                call_command("TrainModel", build_features=True, rebuild=True)
         end_time = datetime.datetime.now()
         print(end_time-start_time)
