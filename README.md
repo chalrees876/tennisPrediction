@@ -24,6 +24,7 @@ pip install -r requirements.txt
 4. Set up environment variables
 ```bash
 touch .env
+export DJANGO_SETTINGS_MODULE='config.settings_prod'
 ```
 
 5. Add the database URL to `.env`:

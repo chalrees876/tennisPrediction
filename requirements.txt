@@ -12,6 +12,7 @@ natsort
 psycopg
 boto3
 playwright
+psycopg-binary
 
 
 
