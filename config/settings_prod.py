@@ -30,20 +30,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY env var is not set")
 
-DEBUG = os.getenv("DEBUG", "0") in ("1", "true", "True")
-
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "Lax"
-
-# Tell Django the original scheme/IP when proxied
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
-# Optional: tighten referrers for CSRF (leave off if you use cross-site POSTs)
-CSRF_COOKIE_HTTPONLY = True
+DEBUG = True
 
 
 LOGGING = {

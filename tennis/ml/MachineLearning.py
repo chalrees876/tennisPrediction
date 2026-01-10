@@ -63,8 +63,10 @@ class MachineLearningModels:
             for j, field in enumerate(self.FEATURE_FIELDS):
                 val = row[field]
                 X[i, j] = float(val) if val is not None else 0.0
+                
+        df = pd.DataFrame(X, columns=self.FEATURE_FIELDS)
         
-        return X, y
+        return df, y
 
     def log_reg_train(self):
         print("-------------------------------\n Logistic Regression (Temporal Validation) --------------------")
