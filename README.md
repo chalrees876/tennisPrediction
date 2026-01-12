@@ -37,12 +37,3 @@ SECRET_KEY = ';alksjdf;alksdjf;asdkljf'
 ```bash
 python manage.py runserver
 ```
-
-### Database Access
-
-The public `DATABASE_URL` provided above is **read-only**. You can view data but cannot modify it.
-```
-
-**Create `.env.example` in your original repo:**
-```
-DATABASE_URL=postgresql://readonly_user:limited_password@your-neon-host/dbname
